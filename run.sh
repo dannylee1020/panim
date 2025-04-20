@@ -7,7 +7,8 @@
 # export WANDB_API_KEY="YOUR_WANDB_API_KEY"
 # export WANDB_PROJECT="panim"
 # export WANDB_NAME="experiment-$(date +%s)" # Example run name
-
+nt to be explicit or change it
+MAX_GRAD_NORM=0.3
 # --- Training Arguments ---
 # Adjust these parameters as needed for your training run
 
@@ -37,8 +38,7 @@ LOGGING_STEPS=10 # Log metrics every N steps
 LEARNING_RATE=2e-4
 WEIGHT_DECAY=0.001
 # FP16="--fp16" # Uncomment if using fp16 (e.g., on T4 GPU)
-BF16="--bf16" # Default in script is True, uncomment this line or the one above if you want to be explicit or change it
-MAX_GRAD_NORM=0.3
+BF16="--bf16" # Default in script is True, uncomment this line or the one above if you wa
 MAX_STEPS=-1 # Set to positive integer to limit steps, overrides epochs
 WARMUP_RATIO=0.03
 LR_SCHEDULER_TYPE="cosine"
