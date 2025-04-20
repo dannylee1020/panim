@@ -5,6 +5,7 @@ import torch
 from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
+    AutoTokenizer,
     BitsAndBytesConfig,
 )
 from peft import LoraConfig
@@ -20,7 +21,6 @@ def format_instruction(sample):
         return None
 
 def main(args):
-    # --- Model and Tokenizer Loading ---
     model_name = args.model_name
 
     # QLoRA configuration
@@ -36,10 +36,17 @@ def main(args):
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
-        device_map={"": 0}
+        device_map="auto",
     )
     model.config.use_cache = False
     model.config.pretraining_tp = 1
+
+    # Load tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    # Set padding token if it's not already set
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
 
     # --- Dataset Loading and Preparation ---
     dataset_path = args.dataset_path
@@ -95,6 +102,7 @@ def main(args):
     # --- Initialize SFTTrainer ---
     trainer = SFTTrainer(
         model=model,
+        processing_class=tokenizer,
         train_dataset=dataset,
         formatting_func=format_instruction,
         peft_config=peft_config,
@@ -103,7 +111,6 @@ def main(args):
 
     # --- Train ---
     print("Starting training...")
-    wandb.login()
     trainer.train()
     print("Training finished.")
 
@@ -111,7 +118,8 @@ def main(args):
     final_output_dir = os.path.join(args.output_dir, "final_checkpoint")
     print(f"Saving final adapter model to {final_output_dir}")
     trainer.model.save_pretrained(final_output_dir) # Saves only the adapter weights
-    print("Model saved.")
+    tokenizer.save_pretrained(final_output_dir) # Save tokenizer alongside adapter
+    print("Model and tokenizer saved.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fine-tune an LLM using SFTTrainer and QLoRA")
