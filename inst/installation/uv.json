@@ -1,0 +1,54 @@
+[
+  {
+    "instruction": "What is the recommended tool for managing Python environments and installing Manim?",
+    "answer": "The documentation strongly recommends using `uv` for managing Python environments and dependencies when working with Manim. While `pip` can be used directly, `uv` is suggested, especially for those new to Python, as it helps follow best practices for setting up project environments."
+  },
+  {
+    "instruction": "How can I install the `uv` tool on my computer?",
+    "answer": "You can install `uv` using its dedicated installer. \n\n**On macOS and Linux:**\nOpen your terminal and run:\n```bash\ncurl -LsSf https://astral.sh/uv/install.sh | sh\n```\n\n**On Windows:**\nOpen PowerShell and run:\n```powershell\npowershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/install.ps1 | iex\"\n```\nFor other installation methods, consult the official `uv` documentation."
+  },
+  {
+    "instruction": "Show me the basic commands to install Manim into a new project environment using `uv`.",
+    "answer": "To install Manim into a new, dedicated project environment using `uv`, open your terminal and run the following commands. You can replace `manimations` with your preferred project name:\n\n```bash\n# Create and initialize the project directory\nuv init manimations\n\n# Navigate into the project directory\ncd manimations\n\n# Add manim as a dependency, which installs it in the local environment\nuv add manim\n```\nManim is now installed within this project's isolated environment."
+  },
+  {
+    "instruction": "Why would I need to install LaTeX to use Manim, and can I skip it?",
+    "answer": "You need to install LaTeX if you plan to render mathematically typeset formulas (using `Tex` or `MathTex` objects) in your Manim animations, like fractions, integrals, or complex equations. If you only need to render plain text and don't require formula typesetting, you can technically skip the LaTeX installation step."
+  },
+  {
+    "instruction": "How should I install LaTeX for Manim on Windows?",
+    "answer": "The recommended method for installing LaTeX on Windows for use with Manim is to install the MiKTeX distribution. Go to the MiKTeX download page (https://miktex.org/download), get the Windows installer, and run it following the on-screen instructions."
+  },
+  {
+    "instruction": "What is the suggested way to install LaTeX for Manim on macOS?",
+    "answer": "For macOS users, the recommended approach is to install the MacTeX distribution. Download the latest PKG file from the official MacTeX download page (https://www.tug.org/mactex/mactex-download.html) and follow the standard macOS installation procedure."
+  },
+  {
+    "instruction": "How do I install the necessary LaTeX distribution for Manim on a Linux system?",
+    "answer": "On Linux, you should install a TeX Live distribution using your system's package manager. The exact command depends on your distribution:\n- For Debian-based systems (like Ubuntu) using `apt`:\n  ```bash\n  sudo apt install texlive-full\n  ```\n- For Fedora systems using `dnf`:\n  ```bash\n  sudo dnf install texlive-scheme-full\n  ```\nIf you use a different Linux distribution, search for instructions on installing TeX Live using its specific package manager."
+  },
+  {
+    "instruction": "Are there any extra dependencies I need to install Manim on macOS, even when using `uv`?",
+    "answer": "Yes, on macOS, before installing Manim itself (even with `uv`), you need to install the system utilities `cairo` and `pkg-config`. The easiest way is using the Homebrew package manager. First, ensure Homebrew is installed, then run:\n```bash\nbrew install cairo pkg-config\n```\nAfter installing these, you can proceed with the `uv init` and `uv add manim` steps."
+  },
+  {
+    "instruction": "What system packages are required before I can install Manim using `uv` on Linux?",
+    "answer": "On Linux, you need to install several development packages before installing Manim with `uv`, because some components like ManimPango might need to be built from source. Required packages typically include a C compiler, Python development headers, `pkg-config`, Pango development headers, and Cairo development headers. Here are commands for common package managers:\n- **Debian/Ubuntu (apt):**\n  ```bash\n  sudo apt update\n  sudo apt install build-essential python3-dev libcairo2-dev libpango1.0-dev\n  ```\n- **Fedora (dnf):**\n  ```bash\n  sudo dnf install python3-devel pkg-config cairo-devel pango-devel\n  ```\n- **Arch Linux (pacman):**\n  ```bash\n  sudo pacman -Syu base-devel cairo pango\n  ```\nOnce these are installed, you can proceed with `uv init` and `uv add manim`."
+  },
+  {
+    "instruction": "How can I check if my Manim installation within a `uv` environment is working correctly?",
+    "answer": "After installing Manim in your project directory using `uv add manim`, you can verify the installation by running Manim's built-in health check. Navigate to your project directory in the terminal and execute:\n\n```bash\nuv run manim checkhealth\n```\nThis command will check Manim and its dependencies within the context of your project's virtual environment."
+  },
+  {
+    "instruction": "How do I set up my code editor (like VS Code or PyCharm) to recognize Manim when installed using `uv` in a project environment?",
+    "answer": "When you install Manim using `uv init` and `uv add manim`, `uv` creates a local virtual environment within your project folder (in a `.venv` directory). Most modern Python IDEs, such as VS Code (with the Python extension) or PyCharm, should automatically detect this environment when you open the project folder. This allows features like autocompletion for `import manim` to work correctly without manual configuration."
+  },
+  {
+    "instruction": "Can I install Manim globally using `uv` instead of creating a project environment every time?",
+    "answer": "Yes, `uv` allows you to install Manim as a global tool, making the `manim` command accessible from anywhere without needing to activate a specific virtual environment. Use the command:\n\n```bash\nuv tool install manim\n```\nHowever, be aware that setting up your IDE for code completion with a globally installed tool requires extra steps. You'll need to manually configure your IDE's Python interpreter to point to the environment located within the directory reported by `uv tool dir`."
+  },
+  {
+    "instruction": "How do I use `uv` to install Manim specifically for Python 3.12?",
+    "answer": "To install Manim in a new project environment specifically using Python 3.12, use the `--python` flag during initialization:\n\n```bash\nuv init --python 3.12 my_python312_project\ncd my_python312_project\nuv add manim\n```\nIf you want to change the Python version for an existing `uv` project to 3.12, you need to:\n1. Edit the `pyproject.toml` file and ensure the `requires-python` entry is compatible (e.g., `requires-python = \">=3.12\"`).\n2. Run `uv python pin 3.12` to set the desired version.\n3. Run `uv sync` to update the environment."
+  }
+]

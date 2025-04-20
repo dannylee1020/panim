@@ -1,0 +1,42 @@
+[
+  {
+    "instruction": "I'm having trouble with my Manim code. Where is the best place to ask the community for help?",
+    "answer": "The Manim community is most active on their Discord server. You should join it and post your question in one of the `#manim-help` channels. Alternatively, you can ask on StackOverflow using the `manim` tag, post on the r/manim subreddit, or start a discussion on GitHub. Before asking, it's good practice to check the FAQ and search existing resources to see if your question has already been answered."
+  },
+  {
+    "instruction": "What should I check before asking the Manim community for help with a problem?",
+    "answer": "Before reaching out to the community, please check the Manim FAQ section to see if your issue is already addressed there. You should also try searching online using your favorite search engine, checking StackOverflow for questions tagged with `manim`, or looking through the r/manim subreddit, as you might find an existing solution."
+  },
+  {
+    "instruction": "How can I formulate my question effectively when asking for help with Manim?",
+    "answer": "To get effective help, explain your problem clearly and precisely. If you encountered an error, include the full error message (stack trace), the specific code that caused it, and the command you used to run Manim. If your code is long, try to create a minimal, simplified version that still reproduces the issue. This makes it easier for others to understand and debug your problem."
+  },
+  {
+    "instruction": "My question in the Manim Discord help channel isn't getting any response. What can I do?",
+    "answer": "First, review your question: Is it clear? Did you provide all necessary information (code, error message, command)? Can you simplify it? If your question got buried, you may politely ping the `@Manim Helper` role after some time has passed (avoid pinging immediately). You could also try posting on a different channel like StackOverflow, but avoid spamming your question across multiple platforms or channels simultaneously. Remember that helpers are volunteers and response times can vary."
+  },
+  {
+    "instruction": "What are the basic rules or code of conduct I should follow when asking for help in the Manim community?",
+    "answer": "The Manim community follows a Code of Conduct summarized as 'be excellent to one another'. This means you should be friendly, patient, considerate, and respectful in all your interactions within the community channels (Discord, GitHub, etc.)."
+  },
+  {
+    "instruction": "I believe I've found a bug in Manim. What's the process for reporting it?",
+    "answer": "To report a bug: \n1. Check the Manim GitHub repository's issues list (both open and closed) to ensure it hasn't already been reported. \n2. Make sure you are running the latest version of Manim, as the bug might be fixed already. \n3. If it's a new bug, create a new issue on GitHub using the 'Bug report' template. \n4. Provide a minimal, reproducible code example illustrating the issue. \n5. Include the complete terminal output, including the command you ran and the full error message. Also, include any log files mentioned in the error."
+  },
+  {
+    "instruction": "I'm not sure if the weird behavior I'm seeing in Manim is a bug or just my misunderstanding. Where can I clarify this?",
+    "answer": "If you are unsure whether something is a bug, it's recommended to ask the community developers first before filing an issue. The preferred place for this is one of the `#manim-dev` channels on the Manim Discord server."
+  },
+  {
+    "instruction": "What's the correct way to suggest a new feature for Manim?",
+    "answer": "To suggest a new feature, you should start a new discussion in the 'Suggestions and Proposals' category on the Manim GitHub repository. This allows the community to discuss the idea. Do *not* create a GitHub Issue directly for suggesting new features; issues are typically created later once the proposal is more concrete and someone intends to work on it."
+  },
+  {
+    "instruction": "What specific information is essential when I submit a bug report for Manim on GitHub?",
+    "answer": "When submitting a Manim bug report on GitHub, you must include:\n1. A minimal code example that reliably reproduces the bug.\n2. The full terminal output, showing the command you used to run Manim and the entire error message (stack trace).\n3. Any relevant log files if they are mentioned in the error output.\n4. Confirmation that you've checked for existing issues and are using the latest Manim version."
+  },
+  {
+    "instruction": "Where can I find information about recent changes and bug fixes in Manim releases?",
+    "answer": "You can find a full list of changes between Manim releases, including bug fixes and new features, in the official Changelog, usually available in the Manim repository or documentation."
+  }
+]

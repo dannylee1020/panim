@@ -1,0 +1,22 @@
+[
+  {
+    "instruction": "I want to start using Manim's OpenGL renderer. Where can I find guides or documentation?",
+    "answer": "While the official online documentation might not fully cover OpenGL specifics, you can find valuable information in the docstrings within the Manim source code for classes like `OpenGLMobject`, `OpenGLVMobject`, and `OpenGLSurface`. Additionally, there's a user guide by 'aquabeam' that can help you get started with the OpenGL renderer."
+  },
+  {
+    "instruction": "What are the fundamental base classes for objects when using Manim's OpenGL renderer?",
+    "answer": "When using the OpenGL renderer in Manim, the relevant base classes for objects are `OpenGLMobject` and `OpenGLVMobject`. You can often find more details about them by consulting the docstrings in the Manim source code."
+  },
+  {
+    "instruction": "Does Manim have a specific class for creating surfaces with the OpenGL renderer?",
+    "answer": "Yes, Manim provides the `OpenGLSurface` class specifically for working with surfaces when utilizing the OpenGL renderer. Documentation for its usage might be found within the source code's docstrings."
+  },
+  {
+    "instruction": "I'm getting a `sqlite3.ProgrammingError` when trying to use Manim's interactive mode (`Scene.interactive_embed`) with the OpenGL renderer. How can I fix this?",
+    "answer": "This error is likely caused by an incompatibility with a recent IPython version. To resolve it, you should try downgrading your installed IPython package to version 8.0.1. You can do this by running the following command in your terminal:\n```bash\npip install IPython==8.0.1\n```"
+  },
+  {
+    "instruction": "What version of IPython is recommended if I encounter issues like `sqlite3.ProgrammingError` with Manim's OpenGL interactive mode?",
+    "answer": "If you run into problems such as the `sqlite3.ProgrammingError` while using Manim's interactive features (`Scene.interactive_embed`) combined with the OpenGL renderer (`--renderer=opengl`), it's recommended to downgrade IPython to version `8.0.1`. Use this command: `pip install IPython==8.0.1`."
+  }
+]

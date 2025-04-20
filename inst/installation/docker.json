@@ -1,0 +1,34 @@
+[
+  {
+    "instruction": "How can I run a Manim animation rendering using Docker with a single command?",
+    "answer": "You can render a Manim scene using a 'throwaway' Docker container. Map your project directory to `/manim` inside the container using the `-v` flag. Replace `/full/path/to/your/directory`, `your_scene_file.py`, and `YourSceneName` accordingly:\n\n```bash\ndocker run --rm -it -v \"/full/path/to/your/directory:/manim\" manimcommunity/manim manim -qm your_scene_file.py YourSceneName\n```\n\nThe `--rm` flag automatically removes the container after execution. Note that flags like `-p` (preview) and `-f` (show file in browser) are not supported within Docker."
+  },
+  {
+    "instruction": "I'm using Manim with Docker on Linux and encountering file permission errors. What can I do?",
+    "answer": "When running Manim in Docker on Linux, the container user might create output files owned by root, causing permission issues on the host. To prevent this, add the `--user=\"$(id -u):$(id -g)\"` flag to your `docker run` command. This ensures the files created inside the container have the same user and group ID as your host user.\n\nExample:\n```bash\ndocker run --rm -it --user=\"$(id -u):$(id -g)\" -v \"/full/path/to/your/directory:/manim\" manimcommunity/manim manim -qm your_scene_file.py YourSceneName\n```"
+  },
+  {
+    "instruction": "How do I set up a persistent Manim Docker container so I can install additional packages like specific TeX dependencies?",
+    "answer": "To create a persistent Manim Docker container that you can modify, first create and name it using `docker run`, mounting your project directory and starting an interactive bash shell:\n\n```bash\ndocker run -it --name my-manim-container -v \"/full/path/to/your/directory:/manim\" manimcommunity/manim bash\n```\n\nInside this shell, you can install dependencies (e.g., using `tlmgr install <package>`). Once done, type `exit`.\nTo use the container later, first start it in the background:\n\n```bash\ndocker start my-manim-container\n```\n\nThen, execute Manim commands using `docker exec`."
+  },
+  {
+    "instruction": "I have a named Manim Docker container called `my-manim-container` running. How do I execute a Manim render command inside it?",
+    "answer": "Once your named container (e.g., `my-manim-container`) is running (started via `docker start my-manim-container`), you can execute Manim commands within it using `docker exec`. For example, to render `YourSceneName` from `your_scene_file.py`:\n\n```bash\ndocker exec -it my-manim-container manim -qm your_scene_file.py YourSceneName\n```"
+  },
+  {
+    "instruction": "What are the different Docker image tags available for `manimcommunity/manim` and what do they mean?",
+    "answer": "The `manimcommunity/manim` Docker image on DockerHub uses these tags:\n*   `latest`: Corresponds to the most recent code on the `main` development branch.\n*   `stable`: Represents the latest official release version (matching the releases page).\n*   `vX.Y.Z`: Refers to a specific released version (e.g., `v0.17.3`), allowing you to use a particular past release."
+  },
+  {
+    "instruction": "How can I run a JupyterLab instance with Manim using the official Docker image?",
+    "answer": "You can start a JupyterLab environment with Manim pre-installed using the following Docker command:\n\n```bash\ndocker run -it -p 8888:8888 manimcommunity/manim jupyter lab --ip=0.0.0.0\n```\n\nThis maps port 8888 from the container to your host machine. After running the command, follow the instructions printed in your terminal (usually involving opening a URL with a token) to access JupyterLab in your browser."
+  },
+  {
+    "instruction": "Explain how to make my local Manim project files available inside the Docker container.",
+    "answer": "To access your local Manim project files (like `.py` scene files) from within the Docker container, you need to mount your local directory as a volume inside the container. This is done using the `-v` flag in the `docker run` command. The format is `-v \"/full/path/on/host:/path/in/container\"`. For the official Manim image, it's recommended to map your project directory to `/manim` inside the container:\n\n```bash\ndocker run ... -v \"/full/path/to/your/directory:/manim\" ...\n```"
+  },
+  {
+    "instruction": "Are there any limitations to using Manim's command-line interface when running it inside a Docker container?",
+    "answer": "Yes, when using Manim's command-line interface (CLI) within a Docker container, some flags that interact directly with the host system's graphical environment or file browser are not supported. Specifically, the `-p` flag (for previewing the animation) and the `-f` flag (for showing the output file in the file browser) will not work as expected."
+  }
+]
