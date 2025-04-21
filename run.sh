@@ -11,19 +11,19 @@ BNB_COMPUTE_DTYPE="bfloat16" # Or "float16" for T4 GPUs
 BNB_QUANT_TYPE="nf4"
 
 # PEFT Args
-LORA_ALPHA=16
-LORA_DROPOUT=0.1
-LORA_R=64
+LORA_ALPHA=8
+LORA_DROPOUT=0.01
+LORA_R=32
 
 # Training Args
 OUTPUT_DIR="./results/$(date +%Y%m%d_%H%M%S)" # Unique output dir per run
-NUM_TRAIN_EPOCHS=5.0
+NUM_TRAIN_EPOCHS=3.0
 PER_DEVICE_TRAIN_BATCH_SIZE=8 # Adjusted for A40 48GB VRAM
 GRADIENT_ACCUMULATION_STEPS=4 # Adjusted for Effective Batch Size = 32
 OPTIM="paged_adamw_8bit"
-SAVE_STEPS=85 # Save checkpoints every N steps
+SAVE_STEPS=50 # Save checkpoints every N steps
 LOGGING_STEPS=10 # Log metrics every N steps
-LEARNING_RATE=2e-4
+LEARNING_RATE=1e-4
 WEIGHT_DECAY=0.001
 FP16_FLAG="" # Set to "--fp16" to enable, leave empty to disable
 BF16_FLAG="--bf16" # Set to "--bf16" to enable, leave empty to disable (Script default is True for bf16)
@@ -34,11 +34,10 @@ LR_SCHEDULER_TYPE="cosine"
 
 # Evaluation & Early Stopping Args
 EVALUATION_STRATEGY="steps" # "steps", "epoch", or "no"
-EVAL_STEPS=85 # Evaluate every N steps if strategy is "steps"
+EVAL_STEPS=50 # Evaluate every N steps if strategy is "steps"
 LOAD_BEST_MODEL_AT_END_FLAG="--load_best_model_at_end" # Include flag to enable (script default is True)
-
-# EARLY_STOPPING_PATIENCE=3 # Patience for early stopping (requires load_best_model_at_end)
-# EARLY_STOPPING_THRESHOLD=0.0
+EARLY_STOPPING_PATIENCE=3 # Patience for early stopping (requires load_best_model_at_end)
+EARLY_STOPPING_THRESHOLD=0.0
 
 # --- Execute Training Script ---
 # Note: Use 'accelerate launch' instead of 'python' for multi-GPU training
@@ -72,9 +71,8 @@ python src/train/train.py \
     --evaluation_strategy "$EVALUATION_STRATEGY" \
     --eval_steps $EVAL_STEPS \
     $LOAD_BEST_MODEL_AT_END_FLAG \
-
-    # --early_stopping_patience $EARLY_STOPPING_PATIENCE \
-    # --early_stopping_threshold $EARLY_STOPPING_THRESHOLD
+    --early_stopping_patience $EARLY_STOPPING_PATIENCE \
+    --early_stopping_threshold $EARLY_STOPPING_THRESHOLD
 
 EXIT_CODE=$?
 if [ $EXIT_CODE -eq 0 ]; then

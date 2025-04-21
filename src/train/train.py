@@ -7,6 +7,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
+    EarlyStoppingCallback
 )
 from peft import LoraConfig
 from trl import SFTTrainer, SFTConfig
@@ -119,21 +120,20 @@ def main(args):
     )
 
     # Add early stopping callback explicitly if needed (though load_best_model_at_end usually suffices)
-    # callbacks = []
-    # if args.evaluation_strategy != "no" and args.early_stopping_patience > 0:
-    #     from transformers import EarlyStoppingCallback
-    #     callbacks.append(EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience,
-    #                                            early_stopping_threshold=args.early_stopping_threshold))
+    callbacks = []
+    if args.evaluation_strategy != "no" and args.early_stopping_patience > 0:
+        callbacks.append(EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience,
+                                               early_stopping_threshold=args.early_stopping_threshold))
 
     # --- Initialize SFTTrainer ---
     trainer = SFTTrainer(
         model=model,
         processing_class=tokenizer,
         train_dataset=train_dataset,
-        eval_dataset=eval_dataset, # Pass evaluation dataset
+        eval_dataset=eval_dataset,
         formatting_func=format_instruction,
         peft_config=peft_config,
-        # callbacks=callbacks, # Pass callbacks if using explicit EarlyStoppingCallback
+        callbacks=callbacks,
         args=training_args,
     )
 
@@ -191,9 +191,8 @@ if __name__ == "__main__":
     parser.add_argument("--evaluation_strategy", type=str, default="steps", choices=["no", "steps", "epoch"], help="Evaluation strategy during training.")
     parser.add_argument("--eval_steps", type=int, default=100, help="Run evaluation every N steps (if evaluation_strategy='steps').")
     parser.add_argument("--load_best_model_at_end", action='store_true', default=True, help="Load the best model checkpoint found during training at the end.")
-
-    # parser.add_argument("--early_stopping_patience", type=int, default=3, help="Number of evaluation steps with no improvement to wait before stopping (requires load_best_model_at_end=True).")
-    # parser.add_argument("--early_stopping_threshold", type=float, default=0.0, help="Minimum improvement threshold for early stopping.")
+    parser.add_argument("--early_stopping_patience", type=int, default=3, help="Number of evaluation steps with no improvement to wait before stopping (requires load_best_model_at_end=True).")
+    parser.add_argument("--early_stopping_threshold", type=float, default=0.0, help="Minimum improvement threshold for early stopping.")
 
 
     args = parser.parse_args()
