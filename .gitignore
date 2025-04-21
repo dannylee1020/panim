@@ -5,11 +5,10 @@ build/
 dist/
 wheels/
 *.egg-info
-
-# Virtual environments
 .venv
 memory-bank
 .clinerules
 .python-version
 source_code/
 .env
+inst/
