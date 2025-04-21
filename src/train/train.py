@@ -32,11 +32,9 @@ def main(args):
         bnb_4bit_use_double_quant=args.use_nested_quant,
     )
 
-    # Load base model
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
-        device_map="auto",
     )
     model.config.use_cache = False
     model.config.pretraining_tp = 1
@@ -49,14 +47,22 @@ def main(args):
     tokenizer.padding_side = "right" # Fix weird overflow issue with fp16 training
 
     # --- Dataset Loading and Preparation ---
-    dataset_path = args.dataset_path
-    json_files = glob.glob(os.path.join(dataset_path, "**/*.json"), recursive=True)
+    train_dataset_path = args.dataset_path
+    if not os.path.isfile(train_dataset_path):
+        raise ValueError(f"Training dataset file not found: {train_dataset_path}")
+    print(f"Loading training dataset from: {train_dataset_path}")
+    train_dataset = load_dataset("json", data_files=train_dataset_path, split="train")
+    print(f"Loaded {len(train_dataset)} training samples.")
 
-    if not json_files:
-        raise ValueError(f"No JSON files found in {dataset_path}")
-
-    # Load dataset from all JSON files
-    dataset = load_dataset("json", data_files=json_files, split="train")
+    # Load evaluation data if strategy is not 'no'
+    eval_dataset = None
+    if args.evaluation_strategy != "no":
+        eval_dataset_path = args.eval_dataset_path
+        if not eval_dataset_path or not os.path.isfile(eval_dataset_path):
+            raise ValueError(f"Evaluation dataset file not found or not specified: {eval_dataset_path}")
+        print(f"Loading evaluation dataset from: {eval_dataset_path}")
+        eval_dataset = load_dataset("json", data_files=eval_dataset_path, split="train")
+        print(f"Loaded {len(eval_dataset)} evaluation samples.")
 
     # --- PEFT Configuration ---
     target_modules = [
@@ -91,21 +97,42 @@ def main(args):
         warmup_ratio=args.warmup_ratio,
         group_by_length=True,
         lr_scheduler_type=args.lr_scheduler_type,
-        report_to="wandb",
+        report_to="wandb", # Or "tensorboard", "none"
         gradient_checkpointing=True,
 
+        # --- Evaluation Arguments ---
+        evaluation_strategy=args.evaluation_strategy,
+        eval_steps=args.eval_steps if args.evaluation_strategy == "steps" else None,
+        load_best_model_at_end=args.load_best_model_at_end,
+        metric_for_best_model="eval_loss" if args.evaluation_strategy != "no" else None,
+        greater_is_better=False, # Lower loss is better
+
+        # --- Early Stopping Arguments (handled by Trainer callback via load_best_model_at_end) ---
+        # Pass patience/threshold if needed by custom callbacks, but Trainer uses them internally
+        # early_stopping_patience=args.early_stopping_patience if args.evaluation_strategy != "no" else None,
+        # early_stopping_threshold=args.early_stopping_threshold if args.evaluation_strategy != "no" else None,
+
         # --- SFT Specific Arguments ---
-        max_seq_length=args.max_seq_length,
+        max_seq_length=args.max_seq_length, # Note: SFTConfig uses max_seq_length, not max_length
         packing=False,
     )
+
+    # Add early stopping callback explicitly if needed (though load_best_model_at_end usually suffices)
+    # callbacks = []
+    # if args.evaluation_strategy != "no" and args.early_stopping_patience > 0:
+    #     from transformers import EarlyStoppingCallback
+    #     callbacks.append(EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience,
+    #                                            early_stopping_threshold=args.early_stopping_threshold))
 
     # --- Initialize SFTTrainer ---
     trainer = SFTTrainer(
         model=model,
-        processing_class=tokenizer,
-        train_dataset=dataset,
+        tokenizer=tokenizer, # Correct argument name is tokenizer
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset, # Pass evaluation dataset
         formatting_func=format_instruction,
         peft_config=peft_config,
+        # callbacks=callbacks, # Pass callbacks if using explicit EarlyStoppingCallback
         args=training_args,
     )
 
@@ -125,10 +152,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fine-tune an LLM using SFTTrainer and QLoRA")
 
     # Model/Tokenizer Args
-    parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-Coder-14B-Instruct", help="Hugging Face model identifier")
+    parser.add_argument("--model_name", type=str, default="google/gemma-3-12b-it", help="Hugging Face model identifier")
 
     # Dataset Args
-    parser.add_argument("--dataset_path", type=str, default="./inst/", help="Path to the directory containing JSON instruction datasets")
+    parser.add_argument("--dataset_path", type=str, default="./data/train/train.json", help="Path to the training dataset JSON file")
+    parser.add_argument("--eval_dataset_path", type=str, default="./data/test/test.json", help="Path to the evaluation dataset JSON file")
     parser.add_argument("--max_seq_length", type=int, default=1024, help="Maximum sequence length for training")
 
     # QLoRA Args
@@ -158,10 +186,23 @@ if __name__ == "__main__":
     parser.add_argument("--warmup_ratio", type=float, default=0.03, help="Warmup ratio for learning rate scheduler")
     parser.add_argument("--lr_scheduler_type", type=str, default="cosine", help="Learning rate scheduler type (e.g., linear, cosine)")
 
+    # Evaluation & Early Stopping Args
+    parser.add_argument("--evaluation_strategy", type=str, default="steps", choices=["no", "steps", "epoch"], help="Evaluation strategy during training.")
+    parser.add_argument("--eval_steps", type=int, default=100, help="Run evaluation every N steps (if evaluation_strategy='steps').")
+    parser.add_argument("--load_best_model_at_end", action='store_true', default=True, help="Load the best model checkpoint found during training at the end.")
+    parser.add_argument("--early_stopping_patience", type=int, default=3, help="Number of evaluation steps with no improvement to wait before stopping (requires load_best_model_at_end=True).")
+    parser.add_argument("--early_stopping_threshold", type=float, default=0.0, help="Minimum improvement threshold for early stopping.")
+
+
     args = parser.parse_args()
 
     # Basic validation
     if args.fp16 and args.bf16:
         raise ValueError("Cannot enable both fp16 and bf16 training. Choose one.")
+    if args.load_best_model_at_end and args.evaluation_strategy == "no":
+        raise ValueError("load_best_model_at_end requires an evaluation_strategy ('steps' or 'epoch').")
+    if args.evaluation_strategy == "steps" and args.eval_steps <= 0:
+        raise ValueError("eval_steps must be positive if evaluation_strategy is 'steps'.")
+
 
     main(args)
