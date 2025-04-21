@@ -36,6 +36,15 @@ fi
 echo "uv command found."
 
 echo "Installing bitsandbytes using uv..."
+# Create virtual environment (default name: .venv)
 uv venv
+# Activate the virtual environment using the correct path
+echo "Activating virtual environment..."
 source .venv/bin/activate
+echo "Virtual environment activated."
+
+# Install bitsandbytes into the activated environment
 uv pip install bitsandbytes
+
+echo "Installing project dependencies into the virtual environment..."
+uv pip install .
