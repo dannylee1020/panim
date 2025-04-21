@@ -12,3 +12,4 @@ memory-bank
 source_code/
 .env
 inst/
+wandb/

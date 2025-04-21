@@ -99,7 +99,7 @@ def main(args):
         warmup_ratio=args.warmup_ratio,
         group_by_length=True,
         lr_scheduler_type=args.lr_scheduler_type,
-        report_to="wandb", # Or "tensorboard", "none"
+        report_to="wandb",
         gradient_checkpointing=True,
 
         # --- Evaluation Arguments ---
