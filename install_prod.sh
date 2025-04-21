@@ -46,5 +46,26 @@ echo "Virtual environment activated."
 # Install bitsandbytes into the activated environment
 uv pip install bitsandbytes
 
+# --- Conditionally Copy SSH Keys ---
+echo "Checking for local SSH keys..."
+if [ -d "ssh" ]; then
+    echo "Found ssh/ directory."
+    if [ -f "ssh/id_ed25519" ] && [ -f "ssh/id_ed25519.pub" ]; then
+        echo "Found id_ed25519 key pair. Copying to /root/.ssh/..."
+        mkdir -p /root/.ssh
+        chmod 700 /root/.ssh
+        cp ssh/id_ed25519 /root/.ssh/id_ed25519
+        cp ssh/id_ed25519.pub /root/.ssh/id_ed25519.pub
+        chmod 600 /root/.ssh/id_ed25519
+        chmod 644 /root/.ssh/id_ed25519.pub
+        echo "SSH keys copied and permissions set."
+    else
+        echo "ssh/ directory exists, but id_ed25519 key pair not found. Skipping copy."
+    fi
+else
+    echo "ssh/ directory not found. Skipping SSH key copy."
+fi
+# --- End SSH Key Copy ---
+
 echo "Installing project dependencies into the virtual environment..."
 uv pip install .
