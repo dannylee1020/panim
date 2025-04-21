@@ -190,8 +190,9 @@ if __name__ == "__main__":
     parser.add_argument("--evaluation_strategy", type=str, default="steps", choices=["no", "steps", "epoch"], help="Evaluation strategy during training.")
     parser.add_argument("--eval_steps", type=int, default=100, help="Run evaluation every N steps (if evaluation_strategy='steps').")
     parser.add_argument("--load_best_model_at_end", action='store_true', default=True, help="Load the best model checkpoint found during training at the end.")
-    parser.add_argument("--early_stopping_patience", type=int, default=3, help="Number of evaluation steps with no improvement to wait before stopping (requires load_best_model_at_end=True).")
-    parser.add_argument("--early_stopping_threshold", type=float, default=0.0, help="Minimum improvement threshold for early stopping.")
+
+    # parser.add_argument("--early_stopping_patience", type=int, default=3, help="Number of evaluation steps with no improvement to wait before stopping (requires load_best_model_at_end=True).")
+    # parser.add_argument("--early_stopping_threshold", type=float, default=0.0, help="Minimum improvement threshold for early stopping.")
 
 
     args = parser.parse_args()

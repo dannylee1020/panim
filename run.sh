@@ -46,8 +46,8 @@ LR_SCHEDULER_TYPE="cosine"
 # Evaluation & Early Stopping Args
 EVALUATION_STRATEGY="steps" # "steps", "epoch", or "no"
 EVAL_STEPS=100 # Evaluate every N steps if strategy is "steps"
+LOAD_BEST_MODEL_AT_END_FLAG="--load_best_model_at_end" # Include flag to enable (script default is True)
 
-# LOAD_BEST_MODEL_AT_END_FLAG="--load_best_model_at_end" # Include flag to enable (script default is True)
 # EARLY_STOPPING_PATIENCE=3 # Patience for early stopping (requires load_best_model_at_end)
 # EARLY_STOPPING_THRESHOLD=0.0
 
@@ -83,8 +83,9 @@ python src/train/train.py \
     --evaluation_strategy "$EVALUATION_STRATEGY" \
     --eval_steps $EVAL_STEPS \
     $LOAD_BEST_MODEL_AT_END_FLAG \
-    --early_stopping_patience $EARLY_STOPPING_PATIENCE \
-    --early_stopping_threshold $EARLY_STOPPING_THRESHOLD
+
+    # --early_stopping_patience $EARLY_STOPPING_PATIENCE \
+    # --early_stopping_threshold $EARLY_STOPPING_THRESHOLD
 
 EXIT_CODE=$?
 if [ $EXIT_CODE -eq 0 ]; then
