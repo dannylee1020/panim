@@ -17,8 +17,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 echo "Installing bitsandbytes..."
 uv pip install bitsandbytes
 
-# 2. Install tmux system package using apt-get
-echo "Updating package list and installing tmux..."
-apt-get update && apt-get install -y tmux
+# 2. Install system packages using apt-get
+echo "Updating package list and installing tmux and vim..."
+apt-get update && apt-get install -y tmux vim
 
 echo "--- Production dependencies installed successfully ---"
