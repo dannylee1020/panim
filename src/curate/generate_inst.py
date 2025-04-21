@@ -5,7 +5,7 @@ import threading
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import fire
-import re # Added for year extraction
+import re
 import prompt
 from provider import Gemini
 
