@@ -35,6 +35,7 @@ def main(args):
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
+        attn_implementation="eager",
     )
     model.config.use_cache = False
     model.config.pretraining_tp = 1
@@ -101,7 +102,7 @@ def main(args):
         gradient_checkpointing=True,
 
         # --- Evaluation Arguments ---
-        evaluation_strategy=args.evaluation_strategy,
+        eval_strategy=args.evaluation_strategy,
         eval_steps=args.eval_steps if args.evaluation_strategy == "steps" else None,
         load_best_model_at_end=args.load_best_model_at_end,
         metric_for_best_model="eval_loss" if args.evaluation_strategy != "no" else None,
@@ -127,7 +128,7 @@ def main(args):
     # --- Initialize SFTTrainer ---
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer, # Correct argument name is tokenizer
+        processing_class=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset, # Pass evaluation dataset
         formatting_func=format_instruction,
@@ -145,7 +146,7 @@ def main(args):
     final_output_dir = os.path.join(args.output_dir, "final_checkpoint")
     print(f"Saving final adapter model to {final_output_dir}")
     trainer.model.save_pretrained(final_output_dir) # Saves only the adapter weights
-    tokenizer.save_pretrained(final_output_dir) # Save tokenizer alongside adapter
+    tokenizer.save_pretrained(final_output_dir)
     print("Model and tokenizer saved.")
 
 if __name__ == "__main__":

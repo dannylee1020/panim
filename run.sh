@@ -1,16 +1,5 @@
 #!/bin/bash
 
-# --- Script to run the SFTTrainer fine-tuning ---
-
-# --- Environment Variables (Optional - for W&B) ---
-# Uncomment and set these if using W&B and not logged in via CLI
-# export WANDB_API_KEY="YOUR_WANDB_API_KEY"
-# export WANDB_PROJECT="panim"
-# export WANDB_NAME="experiment-$(date +%s)" # Example run name
-
-# --- Training Arguments ---
-# Adjust these parameters as needed for your training run
-
 # Model/Data Args
 MODEL_NAME="google/gemma-3-12b-it" # Ensure this model exists or change it
 DATASET_PATH="./data/train/train.json" # Default path to the training JSON file
