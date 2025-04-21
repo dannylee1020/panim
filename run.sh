@@ -7,7 +7,6 @@
 # export WANDB_API_KEY="YOUR_WANDB_API_KEY"
 # export WANDB_PROJECT="panim"
 # export WANDB_NAME="experiment-$(date +%s)" # Example run name
-nt to be explicit or change it
 MAX_GRAD_NORM=0.3
 # --- Training Arguments ---
 # Adjust these parameters as needed for your training run
@@ -18,9 +17,8 @@ DATASET_PATH="./inst/"
 MAX_SEQ_LENGTH=2048
 
 # QLoRA Args
-BNB_COMPUTE_DTYPE="bfloat16" # Or "float16" for T4 GPUs
+BNB_COMPUTE_DTYPE="bfloat16"
 BNB_QUANT_TYPE="nf4"
-# USE_NESTED_QUANT="--use_nested_quant" # Uncomment to enable
 
 # PEFT Args
 LORA_ALPHA=16
