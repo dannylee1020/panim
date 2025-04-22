@@ -478,6 +478,9 @@ def _append_to_json(file_path: Path, new_data: list):
 
         existing_data.extend(new_data)
 
+        # shuffle the existing data for randomness
+        random.shuffle(existing_data)
+
         try:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(existing_data, f, indent=2, ensure_ascii=False)
