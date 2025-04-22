@@ -62,3 +62,6 @@ fi
 
 echo "Installing project dependencies into the virtual environment..."
 uv pip install .
+
+# remove ls color
+unalias ls

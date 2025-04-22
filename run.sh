@@ -17,7 +17,7 @@ LORA_R=32
 
 # Training Args
 OUTPUT_DIR="./results/$(date +%Y%m%d_%H%M%S)" # Unique output dir per run
-NUM_TRAIN_EPOCHS=3.0
+NUM_TRAIN_EPOCHS=6.0
 PER_DEVICE_TRAIN_BATCH_SIZE=8 # Adjusted for A40 48GB VRAM
 GRADIENT_ACCUMULATION_STEPS=4 # Adjusted for Effective Batch Size = 32
 OPTIM="paged_adamw_8bit"
