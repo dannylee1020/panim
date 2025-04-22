@@ -6,17 +6,28 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import fire
 import re
+import random
+from datasets import load_dataset
 import prompt
 from provider import Gemini
 
 # --- Configuration ---
-DOC_INPUT_BASE_DIR = Path("../build/extract") # Renamed for clarity
+DOC_INPUT_BASE_DIR = Path("../build/extract")
 CODE_INPUT_BASE_DIR = Path("../source_code")
 OUTPUT_BASE_DIR = Path("../inst")
-CODE_OUTPUT_BASE_DIR = OUTPUT_BASE_DIR / "source_code" # Specific output for code instructions
-REFERENCE_DIR_NAME = "reference" # Define constant for the special directory
-REFERENCE_OUTPUT_FILENAME = "reference.json" # Define constant for the consolidated output file
+CODE_OUTPUT_BASE_DIR = OUTPUT_BASE_DIR / "source_code"
+REFERENCE_DIR_NAME = "reference"
+REFERENCE_OUTPUT_FILENAME = "reference.json"
 MIN_YEAR_CODE = 2020 # Requirement: Only process code from 2020 onwards
+DATA_DIR = Path("../../data")
+TRAIN_PATH = DATA_DIR / "train" / "train.json"
+TEST_PATH = DATA_DIR / "test" / "test.json"
+TARGET_SAMPLE_SIZE = 3000
+INITIAL_SAMPLE_MULTIPLIER = 1.2
+TRAIN_SPLIT_RATIO = 0.9
+
+# Lock for writing to train/test files
+file_write_lock = threading.Lock()
 
 def _generate_instructions_for_file(input_txt_path: Path) -> list | None:
     """
@@ -78,7 +89,6 @@ def _generate_instructions_for_file(input_txt_path: Path) -> list | None:
         print(f"  Error processing file {input_txt_path.name}: {e}", file=sys.stderr)
         return None
 
-# --- Generate Instructions from Code File ---
 def _generate_instructions_for_code_file(input_py_path: Path) -> list | None:
     """
     Reads a Python source code file and generates instruction/answer pairs using the LLM provider.
@@ -432,6 +442,129 @@ def generate_from_doc(target_dirs: str | tuple | list | None = None, target_file
         print("\nCompleted successfully.")
 
 
+# --- Generate Instructions from Hugging Face Dataset ---
+
+def _append_to_json(file_path: Path, new_data: list):
+    """Safely appends a list of dictionaries to a JSON file containing a list."""
+    with file_write_lock:
+        existing_data = []
+        try:
+            if file_path.is_file() and file_path.stat().st_size > 0:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    if content.strip(): # Check if file is not just whitespace
+                        existing_data = json.loads(content)
+                        if not isinstance(existing_data, list):
+                            print(f"Warning: Corrupted JSON file {file_path} (not a list). Re-initializing.", file=sys.stderr)
+                            existing_data = []
+                    else:
+                         existing_data = [] # Treat empty or whitespace-only file as empty list
+            else:
+                 # Ensure parent directory exists if file doesn't exist
+                 file_path.parent.mkdir(parents=True, exist_ok=True)
+                 print(f"  Note: Created directory {file_path.parent}")
+        except json.JSONDecodeError:
+            print(f"Warning: Corrupted JSON file {file_path} (invalid JSON). Re-initializing.", file=sys.stderr)
+            existing_data = []
+        except FileNotFoundError:
+             print(f"Warning: File not found during read {file_path}. Initializing.", file=sys.stderr)
+             existing_data = []
+             file_path.parent.mkdir(parents=True, exist_ok=True)
+             print(f"  Note: Created directory {file_path.parent}")
+        except Exception as e:
+             print(f"Error reading JSON file {file_path}: {e}. Initializing.", file=sys.stderr)
+             existing_data = []
+
+
+        existing_data.extend(new_data)
+
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            print(f"  -> Successfully appended {len(new_data)} items to {file_path}")
+        except Exception as e:
+            print(f"Error writing updated JSON to {file_path}: {e}", file=sys.stderr)
+
+
+def generate_from_hf(dataset_name: str, sample_size: int = TARGET_SAMPLE_SIZE):
+    """
+    Loads a dataset from Hugging Face (streaming), samples rows, preprocesses them
+    into instruction/answer pairs, and appends them to train.json and test.json.
+
+    Args:
+        dataset_name (str): The name of the dataset on Hugging Face Hub
+        sample_size (int): The target number of instruction pairs to generate and append.
+    """
+    print(f"\nStarting generation from Hugging Face dataset: {dataset_name}")
+    print(f"Target sample size: {sample_size}")
+    print(f"Output train file: {TRAIN_PATH}")
+    print(f"Output test file: {TEST_PATH}")
+
+    initial_load_size = int(sample_size * INITIAL_SAMPLE_MULTIPLIER)
+    print(f"Attempting to load approx {initial_load_size} rows initially (streaming)...")
+
+    processed_pairs = []
+    rows_processed = 0
+    try:
+        dataset = load_dataset(dataset_name, split='train', streaming=True, trust_remote_code=True)
+        sampled_dataset = dataset.take(initial_load_size) # take() works with iterable datasets
+
+        print("Streaming and processing rows...")
+        for example in sampled_dataset:
+            rows_processed += 1
+            pair = {"instruction": example['instruction'], "answer": example['response']}
+            processed_pairs.append(pair)
+
+            # Provide periodic updates
+            if rows_processed % 500 == 0:
+                 print(f"    Processed {rows_processed} rows, collected {len(processed_pairs)} pairs...")
+
+            if len(processed_pairs) >= sample_size:
+                print(f"  Reached target sample size ({sample_size}) after processing {rows_processed} rows.")
+                break
+        print(f"Finished streaming. Processed {rows_processed} rows, generated {len(processed_pairs)} valid pairs.")
+
+    except Exception as e:
+        print(f"Error loading or processing dataset {dataset_name}: {e}", file=sys.stderr)
+        return
+
+    if not processed_pairs:
+        print("Error: No valid instruction/answer pairs were generated. Exiting.", file=sys.stderr)
+        return
+
+    # Ensure we only use up to sample_size pairs if we generated more
+    if len(processed_pairs) > sample_size:
+        processed_pairs = processed_pairs[:sample_size]
+        print(f"  Trimmed generated pairs to target size: {sample_size}")
+
+
+    # Shuffle and split
+    random.shuffle(processed_pairs)
+    split_index = int(len(processed_pairs) * TRAIN_SPLIT_RATIO)
+    train_pairs = processed_pairs[:split_index]
+    test_pairs = processed_pairs[split_index:]
+
+    print(f"\nSplitting {len(processed_pairs)} pairs:")
+    print(f"  Train size: {len(train_pairs)}")
+    print(f"  Test size:  {len(test_pairs)}")
+
+    # Append to files
+    print("\nAppending data to JSON files...")
+    if train_pairs:
+        _append_to_json(TRAIN_PATH, train_pairs)
+    if test_pairs:
+        _append_to_json(TEST_PATH, test_pairs)
+
+    print("\n--- Hugging Face Data Processing Summary ---")
+    print(f"Dataset:              {dataset_name}")
+    print(f"Target sample size:   {sample_size}")
+    print(f"Initial rows streamed:{rows_processed}") # Corrected label
+    print(f"Valid pairs generated:{len(processed_pairs)}")
+    print(f"Appended to train:    {len(train_pairs)}")
+    print(f"Appended to test:     {len(test_pairs)}")
+    print("\nCompleted.")
+
+
 # --- Main Generate Function (Code) ---
 # TODO: needs evaluation
 def generate_from_code(target_years: str | tuple | list | None = None):
@@ -595,5 +728,6 @@ def generate_from_code(target_years: str | tuple | list | None = None):
 if __name__ == "__main__":
     fire.Fire({
         "generate_from_doc": generate_from_doc,
-        "generate_from_code": generate_from_code
+        "generate_from_code": generate_from_code,
+        "generate_from_hf": generate_from_hf
     })

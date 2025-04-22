@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# --- Production Dependency Installation Script ---
-# Installs dependencies typically needed in the production/runtime environment
-# for the Panim project, beyond the core Python packages listed in pyproject.toml's
-# main dependencies (though bitsandbytes might be added there eventually).
-
-
 set -e # Exit immediately if a command exits with a non-zero status.
 
 echo "--- Installing Production Dependencies ---"
@@ -52,7 +46,6 @@ if [ -d "ssh" ]; then
     echo "Found ssh/ directory."
     if [ -f "ssh/id_ed25519" ] && [ -f "ssh/id_ed25519.pub" ]; then
         echo "Found id_ed25519 key pair. Copying to /root/.ssh/..."
-        mkdir -p /root/.ssh
         chmod 700 /root/.ssh
         cp ssh/id_ed25519 /root/.ssh/id_ed25519
         cp ssh/id_ed25519.pub /root/.ssh/id_ed25519.pub

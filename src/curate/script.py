@@ -144,6 +144,8 @@ def split_inst_data(
     except Exception as e:
         print(f"An unexpected error occurred during writing: {e}")
 
+
+
 if __name__ == "__main__":
     print("Running data split script directly...")
     split_inst_data()
