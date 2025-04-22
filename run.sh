@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Model/Data Args
-MODEL_NAME="google/gemma-3-12b-it" # Ensure this model exists or change it
+MODEL_NAME="google/gemma-3-12b-it"
 DATASET_PATH="./data/train/train.json" # Default path to the training JSON file
 EVAL_DATASET_PATH="./data/test/test.json" # Default path to the evaluation JSON file
-MAX_SEQ_LENGTH=2048
+MAX_SEQ_LENGTH=1024
 
 # QLoRA Args
-BNB_COMPUTE_DTYPE="bfloat16" # Or "float16" for T4 GPUs
+BNB_COMPUTE_DTYPE="bfloat16"
 BNB_QUANT_TYPE="nf4"
 
 # PEFT Args
@@ -18,8 +18,8 @@ LORA_R=32
 # Training Args
 OUTPUT_DIR="./results/$(date +%Y%m%d_%H%M%S)" # Unique output dir per run
 NUM_TRAIN_EPOCHS=6.0
-PER_DEVICE_TRAIN_BATCH_SIZE=8 # Adjusted for A40 48GB VRAM
-GRADIENT_ACCUMULATION_STEPS=4 # Adjusted for Effective Batch Size = 32
+PER_DEVICE_TRAIN_BATCH_SIZE=4
+GRADIENT_ACCUMULATION_STEPS=8
 OPTIM="paged_adamw_8bit"
 SAVE_STEPS=50 # Save checkpoints every N steps
 LOGGING_STEPS=10 # Log metrics every N steps

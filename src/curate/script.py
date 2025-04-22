@@ -2,13 +2,20 @@ import json
 import random
 import math
 import os
+import argparse
+import numpy as np # Using numpy for average calculation
 from pathlib import Path
 from collections import defaultdict
 from typing import List, Dict, Any, Tuple
+from transformers import AutoTokenizer
 
-# Define default paths relative to the project root where this script might be run from
-DEFAULT_INPUT_DIR = Path("../../inst")
-DEFAULT_OUTPUT_DIR = Path("../../data")
+# Define default paths relative to the project root
+# Assuming script is run from project root or paths are adjusted accordingly
+DEFAULT_INPUT_DIR = Path("./inst")
+DEFAULT_OUTPUT_DIR = Path("./data")
+DEFAULT_TRAIN_PATH = DEFAULT_OUTPUT_DIR / "train" / "train.json"
+DEFAULT_TEST_PATH = DEFAULT_OUTPUT_DIR / "test" / "test.json"
+DEFAULT_MODEL_NAME = "google/gemma-3-12b-it"
 
 def split_inst_data(
     input_dir: Path = DEFAULT_INPUT_DIR,
@@ -145,8 +152,183 @@ def split_inst_data(
         print(f"An unexpected error occurred during writing: {e}")
 
 
+# --- Token Statistics Calculation ---
+
+def format_instruction_for_tokenization(sample: Dict[str, Any]) -> str | None:
+    """Formats a sample for tokenization, matching the training script."""
+    instruction = sample.get("instruction", "")
+    answer = sample.get("answer", "")
+    if instruction and answer:
+        # Ensure consistent formatting with train.py
+        return f"### Instruction:\n{instruction}\n\n### Answer:\n{answer}"
+    else:
+        print(f"Warning: Skipping sample due to missing instruction or answer: {sample}")
+        return None
+
+def calculate_token_stats(
+    train_path: Path = DEFAULT_TRAIN_PATH,
+    test_path: Path = DEFAULT_TEST_PATH,
+    model_name: str = DEFAULT_MODEL_NAME,
+) -> None:
+    """
+    Calculates and prints the average and maximum token lengths for
+    train and test datasets using the specified tokenizer.
+
+    Args:
+        train_path: Path to the training data JSON file.
+        test_path: Path to the test data JSON file.
+        model_name: Hugging Face model identifier for the tokenizer.
+    """
+    print(f"Calculating token stats using tokenizer: '{model_name}'")
+    print(f"Train data: '{train_path}'")
+    print(f"Test data: '{test_path}'")
+
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        # Set padding token if needed (though not strictly necessary for length calculation)
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        print("Tokenizer loaded successfully.")
+    except Exception as e:
+        print(f"Error loading tokenizer '{model_name}': {e}")
+        return
+
+    def get_stats_for_file(file_path: Path) -> Tuple[float, int] | None:
+        """Helper function to calculate stats for a single JSON file."""
+        if not file_path.is_file():
+            print(f"Error: Data file not found: '{file_path}'")
+            return None
+
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                print(f"Error: Data in '{file_path}' is not a list.")
+                return None
+            if not data:
+                print(f"Warning: Data file '{file_path}' is empty.")
+                return 0.0, 0 # Return zero stats for empty file
+        except json.JSONDecodeError:
+            print(f"Error: Could not decode JSON from '{file_path}'.")
+            return None
+        except Exception as e:
+            print(f"Error reading file '{file_path}': {e}")
+            return None
+
+        token_lengths = []
+        print(f"Processing {len(data)} samples from '{file_path}'...")
+        processed_count = 0
+        for i, sample in enumerate(data):
+            formatted_text = format_instruction_for_tokenization(sample)
+            if formatted_text:
+                try:
+                    tokens = tokenizer(formatted_text, add_special_tokens=True)['input_ids']
+                    token_lengths.append(len(tokens))
+                    processed_count += 1
+                except Exception as e:
+                    print(f"Warning: Error tokenizing sample {i} in {file_path}: {e}. Skipping.")
+            # Optional: Add progress indicator for large files
+            # if (i + 1) % 1000 == 0:
+            #     print(f"  Processed {i + 1}/{len(data)} samples...")
+
+        if not token_lengths:
+            print(f"No valid samples found or tokenized in '{file_path}'.")
+            return 0.0, 0
+
+        avg_len = np.mean(token_lengths)
+        max_len = np.max(token_lengths)
+        print(f"Finished processing '{file_path}'. Found {processed_count} valid samples.")
+        avg_len = np.mean(token_lengths)
+        max_len = np.max(token_lengths)
+        p90_len = np.percentile(token_lengths, 90)
+        p95_len = np.percentile(token_lengths, 95)
+        print(f"Finished processing '{file_path}'. Found {processed_count} valid samples.")
+        return avg_len, max_len, p90_len, p95_len
+
+    # Calculate stats for train data
+    print("\n--- Training Data Stats ---")
+    train_stats = get_stats_for_file(train_path)
+    if train_stats:
+        avg_train, max_train, p90_train, p95_train = train_stats
+        print(f"Average Token Length (Train): {avg_train:.2f}")
+        print(f"Maximum Token Length (Train): {max_train}")
+        print(f"90th Percentile Length (Train): {p90_train:.2f}")
+        print(f"95th Percentile Length (Train): {p95_train:.2f}")
+
+
+    # Calculate stats for test data
+    print("\n--- Test Data Stats ---")
+    test_stats = get_stats_for_file(test_path)
+    if test_stats:
+        avg_test, max_test, p90_test, p95_test = test_stats
+        print(f"Average Token Length (Test): {avg_test:.2f}")
+        print(f"Maximum Token Length (Test): {max_test}")
+        print(f"90th Percentile Length (Test): {p90_test:.2f}")
+        print(f"95th Percentile Length (Test): {p95_test:.2f}")
+
+
+    print("\nToken statistics calculation finished.")
+
 
 if __name__ == "__main__":
-    print("Running data split script directly...")
-    split_inst_data()
-    print("Script finished.")
+    parser = argparse.ArgumentParser(description="Data processing script for Panim project.")
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # --- Subparser for 'split' command ---
+    parser_split = subparsers.add_parser("split", help="Split instruction data into train/test sets.")
+    parser_split.add_argument(
+        "--input_dir", type=Path, default=DEFAULT_INPUT_DIR,
+        help=f"Input directory containing source data subdirectories (default: {DEFAULT_INPUT_DIR})"
+    )
+    parser_split.add_argument(
+        "--output_dir", type=Path, default=DEFAULT_OUTPUT_DIR,
+        help=f"Output directory for train/test splits (default: {DEFAULT_OUTPUT_DIR})"
+    )
+    parser_split.add_argument(
+        "--test_ratio", type=float, default=0.1,
+        help="Proportion of data for the test set (default: 0.1)"
+    )
+    parser_split.add_argument(
+        "--random_seed", type=int, default=42,
+        help="Random seed for reproducible splits (default: 42)"
+    )
+
+    # --- Subparser for 'stats' command ---
+    parser_stats = subparsers.add_parser("stats", help="Calculate token statistics for train/test data.")
+    parser_stats.add_argument(
+        "--train_path", type=Path, default=DEFAULT_TRAIN_PATH,
+        help=f"Path to the training data JSON file (default: {DEFAULT_TRAIN_PATH})"
+    )
+    parser_stats.add_argument(
+        "--test_path", type=Path, default=DEFAULT_TEST_PATH,
+        help=f"Path to the test data JSON file (default: {DEFAULT_TEST_PATH})"
+    )
+    parser_stats.add_argument(
+        "--model_name", type=str, default=DEFAULT_MODEL_NAME,
+        help=f"Hugging Face model identifier for tokenizer (default: {DEFAULT_MODEL_NAME})"
+    )
+
+    args = parser.parse_args()
+
+    if args.command == "split":
+        print("Running data split...")
+        split_inst_data(
+            input_dir=args.input_dir,
+            output_dir=args.output_dir,
+            test_ratio=args.test_ratio,
+            random_seed=args.random_seed,
+        )
+        print("Data split finished.")
+    elif args.command == "stats":
+        print("Running token statistics calculation...")
+        # Ensure paths are resolved correctly if script is run from project root
+        calculate_token_stats(
+            train_path=args.train_path.resolve(),
+            test_path=args.test_path.resolve(),
+            model_name=args.model_name
+        )
+        print("Token statistics calculation finished.")
+    else:
+        print("No command specified. Use 'split' or 'stats'. Try --help for options.")
+        # Optionally run a default command or show help
+        # parser.print_help()
