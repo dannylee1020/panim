@@ -1,6 +1,4 @@
 import os
-import glob
-import wandb
 import torch
 from datasets import load_dataset
 from transformers import (
@@ -108,11 +106,6 @@ def main(args):
         load_best_model_at_end=args.load_best_model_at_end,
         metric_for_best_model="eval_loss" if args.evaluation_strategy != "no" else None,
         greater_is_better=False, # Lower loss is better
-
-        # --- Early Stopping Arguments (handled by Trainer callback via load_best_model_at_end) ---
-        # Pass patience/threshold if needed by custom callbacks, but Trainer uses them internally
-        # early_stopping_patience=args.early_stopping_patience if args.evaluation_strategy != "no" else None,
-        # early_stopping_threshold=args.early_stopping_threshold if args.evaluation_strategy != "no" else None,
 
         # --- SFT Specific Arguments ---
         max_seq_length=args.max_seq_length, # Note: SFTConfig uses max_seq_length, not max_length
