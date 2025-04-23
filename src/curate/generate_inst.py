@@ -1,14 +1,15 @@
-import os
-import sys
 import json
-import threading
-from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import fire
-import re
+import os
 import random
-from datasets import load_dataset
+import re
+import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+import fire
 import prompt
+from datasets import load_dataset
 from provider import Gemini
 
 # --- Configuration ---
@@ -18,7 +19,7 @@ OUTPUT_BASE_DIR = Path("../inst")
 CODE_OUTPUT_BASE_DIR = OUTPUT_BASE_DIR / "source_code"
 REFERENCE_DIR_NAME = "reference"
 REFERENCE_OUTPUT_FILENAME = "reference.json"
-MIN_YEAR_CODE = 2020 # Requirement: Only process code from 2020 onwards
+MIN_YEAR_CODE = 2020  # Requirement: Only process code from 2020 onwards
 DATA_DIR = Path("../../data")
 TRAIN_PATH = DATA_DIR / "train" / "train.json"
 TEST_PATH = DATA_DIR / "test" / "test.json"
@@ -28,6 +29,7 @@ TRAIN_SPLIT_RATIO = 0.9
 
 # Lock for writing to train/test files
 file_write_lock = threading.Lock()
+
 
 def _generate_instructions_for_file(input_txt_path: Path) -> list | None:
     """
@@ -40,7 +42,7 @@ def _generate_instructions_for_file(input_txt_path: Path) -> list | None:
         None on failure or if the file was skipped.
     """
     try:
-        with open(input_txt_path, 'r', encoding='utf-8') as f:
+        with open(input_txt_path, "r", encoding="utf-8") as f:
             input_text = f.read()
 
         if not input_text.strip():
@@ -49,36 +51,54 @@ def _generate_instructions_for_file(input_txt_path: Path) -> list | None:
 
         # Call LLM
         llm = Gemini()
-        response = llm.generate(message=prompt.generate_inst_from_doc.format(input_text=input_text))
+        response = llm.generate(
+            message=prompt.generate_inst_from_doc.format(input_text=input_text)
+        )
 
         # Attempt to extract and parse the JSON part of the response
         try:
             # Adapt based on actual response structure from LLM provider
             response_text = response.text
-            json_text = response_text.strip().strip('```json').strip('```').strip()
+            json_text = response_text.strip().strip("```json").strip("```").strip()
             instruction_pairs = json.loads(json_text)
 
             # Basic validation
             if not isinstance(instruction_pairs, list):
                 raise ValueError("Generated output is not a JSON list.")
             for pair in instruction_pairs:
-                if not isinstance(pair, dict) or "instruction" not in pair or "answer" not in pair:
+                if (
+                    not isinstance(pair, dict)
+                    or "instruction" not in pair
+                    or "answer" not in pair
+                ):
                     raise ValueError("Generated list contains invalid pair objects.")
 
             return instruction_pairs
 
         except json.JSONDecodeError as e:
-            print(f"    Error: Failed to decode JSON response for {input_txt_path.name}.", file=sys.stderr)
+            print(
+                f"    Error: Failed to decode JSON response for {input_txt_path.name}.",
+                file=sys.stderr,
+            )
             return None
         except ValueError as e:
-             print(f"    Error: Invalid JSON structure response for {input_txt_path.name}: {e}", file=sys.stderr)
-             return None
+            print(
+                f"    Error: Invalid JSON structure response for {input_txt_path.name}: {e}",
+                file=sys.stderr,
+            )
+            return None
         except KeyError as e:
-             print(f"    Error: Unexpected response structure (missing key {e}) for {input_txt_path.name}.", file=sys.stderr)
-             return None
+            print(
+                f"    Error: Unexpected response structure (missing key {e}) for {input_txt_path.name}.",
+                file=sys.stderr,
+            )
+            return None
         except Exception as e:
             # Catch other potential issues with response structure
-            print(f"    Error processing response for {input_txt_path.name}: {e}", file=sys.stderr)
+            print(
+                f"    Error processing response for {input_txt_path.name}: {e}",
+                file=sys.stderr,
+            )
             return None
 
     except FileNotFoundError:
@@ -88,6 +108,7 @@ def _generate_instructions_for_file(input_txt_path: Path) -> list | None:
         # Log exceptions during file processing
         print(f"  Error processing file {input_txt_path.name}: {e}", file=sys.stderr)
         return None
+
 
 def _generate_instructions_for_code_file(input_py_path: Path) -> list | None:
     """
@@ -100,7 +121,7 @@ def _generate_instructions_for_code_file(input_py_path: Path) -> list | None:
         None on failure or if the file was skipped.
     """
     try:
-        with open(input_py_path, 'r', encoding='utf-8') as f:
+        with open(input_py_path, "r", encoding="utf-8") as f:
             source_code = f.read()
 
         if not source_code.strip():
@@ -110,37 +131,55 @@ def _generate_instructions_for_code_file(input_py_path: Path) -> list | None:
         # Call LLM
         llm = Gemini()
         # Use the specific prompt for code
-        response = llm.generate(message=prompt.generate_inst_from_code.format(source_code=source_code))
+        response = llm.generate(
+            message=prompt.generate_inst_from_code.format(source_code=source_code)
+        )
 
         # Attempt to extract and parse the JSON part of the response
         try:
             # Adapt based on actual response structure from LLM provider
             response_text = response.text
             # Handle potential markdown code block fences
-            json_text = response_text.strip().strip('```json').strip('```').strip()
+            json_text = response_text.strip().strip("```json").strip("```").strip()
             instruction_pairs = json.loads(json_text)
 
             # Basic validation
             if not isinstance(instruction_pairs, list):
                 raise ValueError("Generated output is not a JSON list.")
             for pair in instruction_pairs:
-                if not isinstance(pair, dict) or "instruction" not in pair or "answer" not in pair:
+                if (
+                    not isinstance(pair, dict)
+                    or "instruction" not in pair
+                    or "answer" not in pair
+                ):
                     raise ValueError("Generated list contains invalid pair objects.")
 
             return instruction_pairs
 
         except json.JSONDecodeError as e:
-            print(f"    Error: Failed to decode JSON response for {input_py_path.name}.", file=sys.stderr)
+            print(
+                f"    Error: Failed to decode JSON response for {input_py_path.name}.",
+                file=sys.stderr,
+            )
             return None
         except ValueError as e:
-             print(f"    Error: Invalid JSON structure response for {input_py_path.name}: {e}", file=sys.stderr)
-             return None
+            print(
+                f"    Error: Invalid JSON structure response for {input_py_path.name}: {e}",
+                file=sys.stderr,
+            )
+            return None
         except KeyError as e:
-             print(f"    Error: Unexpected response structure (missing key {e}) for {input_py_path.name}.", file=sys.stderr)
-             return None
+            print(
+                f"    Error: Unexpected response structure (missing key {e}) for {input_py_path.name}.",
+                file=sys.stderr,
+            )
+            return None
         except Exception as e:
             # Catch other potential issues with response structure
-            print(f"    Error processing response for {input_py_path.name}: {e}", file=sys.stderr)
+            print(
+                f"    Error processing response for {input_py_path.name}: {e}",
+                file=sys.stderr,
+            )
             return None
 
     except FileNotFoundError:
@@ -153,7 +192,9 @@ def _generate_instructions_for_code_file(input_py_path: Path) -> list | None:
 
 
 # --- Worker Function for Processing Doc Files Concurrently within a Directory ---
-def _process_directory_concurrently(dir_name, summary_lock, summary_stats, reference_lock):
+def _process_directory_concurrently(
+    dir_name, summary_lock, summary_stats, reference_lock
+):
     """
     Processes a single directory, generating instruction pairs for its .txt files
     concurrently using a thread pool.
@@ -164,16 +205,19 @@ def _process_directory_concurrently(dir_name, summary_lock, summary_stats, refer
         summary_stats (dict): Dictionary holding overall processing statistics.
         reference_lock (threading.Lock): Lock for accessing the consolidated reference file.
     """
-    is_reference_dir = (dir_name == REFERENCE_DIR_NAME)
+    is_reference_dir = dir_name == REFERENCE_DIR_NAME
     reference_output_dir = OUTPUT_BASE_DIR / REFERENCE_DIR_NAME
     reference_output_path = reference_output_dir / REFERENCE_OUTPUT_FILENAME
-    input_dir = DOC_INPUT_BASE_DIR / dir_name # Use renamed constant
+    input_dir = DOC_INPUT_BASE_DIR / dir_name  # Use renamed constant
     output_dir = OUTPUT_BASE_DIR / dir_name
 
     print(f"\nProcessing doc directory: {dir_name}")
 
     if not input_dir.is_dir():
-        print(f"  Warning: Input doc directory '{input_dir}' not found. Skipping.", file=sys.stderr)
+        print(
+            f"  Warning: Input doc directory '{input_dir}' not found. Skipping.",
+            file=sys.stderr,
+        )
         return
 
     # Create output dir only if not reference
@@ -182,9 +226,9 @@ def _process_directory_concurrently(dir_name, summary_lock, summary_stats, refer
 
     print(f"  Input:  {input_dir}")
     if is_reference_dir:
-         print(f"  Output: Appending to {reference_output_path}")
+        print(f"  Output: Appending to {reference_output_path}")
     else:
-         print(f"  Output: {output_dir}")
+        print(f"  Output: {output_dir}")
 
     # --- Find files ---
     txt_files = list(input_dir.glob("*.txt"))
@@ -193,28 +237,35 @@ def _process_directory_concurrently(dir_name, summary_lock, summary_stats, refer
     if not txt_files:
         print(f"  No .txt files found in {input_dir}.")
         with summary_lock:
-            summary_stats['total_txt_files_found'] += current_dir_txt_found
+            summary_stats["total_txt_files_found"] += current_dir_txt_found
         return
 
     # --- Process files concurrently ---
     current_dir_processed = 0
     current_dir_succeeded = 0
     current_dir_failed = 0
-    reference_pairs_to_append = [] # Collect pairs for reference dir before writing
+    reference_pairs_to_append = []  # Collect pairs for reference dir before writing
 
     # Using ThreadPoolExecutor to manage threads for file processing
     num_workers = min(10, os.cpu_count() + 4 if os.cpu_count() else 8)
-    print(f"  Processing {len(txt_files)} files concurrently using {num_workers} workers...")
+    print(
+        f"  Processing {len(txt_files)} files concurrently using {num_workers} workers..."
+    )
 
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         # Create a dictionary to map futures to their input paths
-        future_to_path = {executor.submit(_generate_instructions_for_file, txt_path): txt_path for txt_path in txt_files}
+        future_to_path = {
+            executor.submit(_generate_instructions_for_file, txt_path): txt_path
+            for txt_path in txt_files
+        }
 
         for future in as_completed(future_to_path):
             txt_path = future_to_path[future]
             current_dir_processed += 1
             try:
-                instruction_pairs = future.result() # Get result from the completed future
+                instruction_pairs = (
+                    future.result()
+                )  # Get result from the completed future
 
                 if instruction_pairs is not None:
                     if is_reference_dir:
@@ -226,21 +277,33 @@ def _process_directory_concurrently(dir_name, summary_lock, summary_stats, refer
                         # Write individual file for non-reference directories immediately
                         output_path = output_dir / txt_path.with_suffix(".json").name
                         try:
-                            with open(output_path, 'w', encoding='utf-8') as f_out:
-                                json.dump(instruction_pairs, f_out, indent=2, ensure_ascii=False)
+                            with open(output_path, "w", encoding="utf-8") as f_out:
+                                json.dump(
+                                    instruction_pairs,
+                                    f_out,
+                                    indent=2,
+                                    ensure_ascii=False,
+                                )
                             current_dir_succeeded += 1
                         except Exception as e:
-                            print(f"    Error writing output file {output_path}: {e}", file=sys.stderr)
-                            current_dir_failed += 1 # Count as failed if write fails
+                            print(
+                                f"    Error writing output file {output_path}: {e}",
+                                file=sys.stderr,
+                            )
+                            current_dir_failed += 1  # Count as failed if write fails
                 else:
                     current_dir_failed += 1
             except Exception as exc:
-                print(f'    Error processing file {txt_path.name}: {exc}', file=sys.stderr)
+                print(
+                    f"    Error processing file {txt_path.name}: {exc}", file=sys.stderr
+                )
                 current_dir_failed += 1
 
     # --- Handle Reference Directory Output (after all files in this dir are processed) ---
     if is_reference_dir and reference_pairs_to_append:
-        print(f"  Appending {len(reference_pairs_to_append)} total pairs to reference file: {reference_output_path}")
+        print(
+            f"  Appending {len(reference_pairs_to_append)} total pairs to reference file: {reference_output_path}"
+        )
         try:
             with reference_lock:
                 # Ensure directory exists (might be redundant but safe)
@@ -249,46 +312,61 @@ def _process_directory_concurrently(dir_name, summary_lock, summary_stats, refer
                 existing_pairs = []
                 if reference_output_path.is_file():
                     try:
-                        with open(reference_output_path, 'r', encoding='utf-8') as f_in:
+                        with open(reference_output_path, "r", encoding="utf-8") as f_in:
                             content = f_in.read()
-                            if content.strip(): # Check if file is not empty
+                            if content.strip():  # Check if file is not empty
                                 existing_pairs = json.loads(content)
                                 if not isinstance(existing_pairs, list):
-                                    print(f"    Warning: Corrupted reference file {reference_output_path} (not a list). Re-initializing.", file=sys.stderr)
+                                    print(
+                                        f"    Warning: Corrupted reference file {reference_output_path} (not a list). Re-initializing.",
+                                        file=sys.stderr,
+                                    )
                                     existing_pairs = []
                             else:
-                                existing_pairs = [] # Treat empty file as empty list
+                                existing_pairs = []  # Treat empty file as empty list
                     except json.JSONDecodeError:
-                        print(f"    Warning: Corrupted reference file {reference_output_path} (invalid JSON). Re-initializing.", file=sys.stderr)
+                        print(
+                            f"    Warning: Corrupted reference file {reference_output_path} (invalid JSON). Re-initializing.",
+                            file=sys.stderr,
+                        )
                         existing_pairs = []
                     except FileNotFoundError:
-                         # Should not happen if is_file() passed, but handle defensively
-                         existing_pairs = []
+                        # Should not happen if is_file() passed, but handle defensively
+                        existing_pairs = []
 
                 # Append new pairs and write back
                 existing_pairs.extend(reference_pairs_to_append)
-                with open(reference_output_path, 'w', encoding='utf-8') as f_out:
+                with open(reference_output_path, "w", encoding="utf-8") as f_out:
                     json.dump(existing_pairs, f_out, indent=2, ensure_ascii=False)
             print(f"    -> Successfully appended pairs to {reference_output_path}")
             # Note: Success/failure counts were already updated when pairs were generated/collected
         except Exception as e:
-            print(f"    Error appending batch to reference file {reference_output_path}: {e}", file=sys.stderr)
+            print(
+                f"    Error appending batch to reference file {reference_output_path}: {e}",
+                file=sys.stderr,
+            )
             # Adjust counts as saving failed despite generation success
-            current_dir_succeeded -= len(reference_pairs_to_append) # Revert success count
-            current_dir_failed += len(reference_pairs_to_append)    # Increment fail count
+            current_dir_succeeded -= len(
+                reference_pairs_to_append
+            )  # Revert success count
+            current_dir_failed += len(reference_pairs_to_append)  # Increment fail count
 
-    print(f"  Finished processing {dir_name}: Found={current_dir_txt_found}, Attempted={current_dir_processed}, Succeeded={current_dir_succeeded}, Failed={current_dir_failed}")
+    print(
+        f"  Finished processing {dir_name}: Found={current_dir_txt_found}, Attempted={current_dir_processed}, Succeeded={current_dir_succeeded}, Failed={current_dir_failed}"
+    )
 
     # --- Update shared summary statistics safely ---
     with summary_lock:
-        summary_stats['total_files_processed'] += current_dir_processed
-        summary_stats['total_files_succeeded'] += current_dir_succeeded
-        summary_stats['total_files_failed'] += current_dir_failed
-        summary_stats['total_txt_files_found'] += current_dir_txt_found
+        summary_stats["total_files_processed"] += current_dir_processed
+        summary_stats["total_files_succeeded"] += current_dir_succeeded
+        summary_stats["total_files_failed"] += current_dir_failed
+        summary_stats["total_txt_files_found"] += current_dir_txt_found
 
 
 # --- Main Generate Function (Docs) ---
-def generate_from_doc(target_dirs: str | tuple | list | None = None, target_file: str | None = None):
+def generate_from_doc(
+    target_dirs: str | tuple | list | None = None, target_file: str | None = None
+):
     """
     Generates instruction/answer pairs for .txt files extracted from documentation.
     Processes directories sequentially, but processes files within each directory concurrently.
@@ -313,21 +391,31 @@ def generate_from_doc(target_dirs: str | tuple | list | None = None, target_file
     # --- Handle target_file first (takes precedence) ---
     if target_file:
         if target_dirs:
-            print("Warning: Both --target_file and --target_dirs provided. --target_file takes precedence.", file=sys.stderr)
+            print(
+                "Warning: Both --target_file and --target_dirs provided. --target_file takes precedence.",
+                file=sys.stderr,
+            )
 
-        input_path = DOC_INPUT_BASE_DIR / target_file # Use renamed constant
+        input_path = DOC_INPUT_BASE_DIR / target_file  # Use renamed constant
         print(f"\nProcessing single target doc file: {input_path}")
 
         if not input_path.is_file():
             print(f"Error: Target doc file not found: {input_path}", file=sys.stderr)
             return
         if input_path.suffix.lower() != ".txt":
-             print(f"Error: Target doc file must be a .txt file: {input_path}", file=sys.stderr)
-             return
+            print(
+                f"Error: Target doc file must be a .txt file: {input_path}",
+                file=sys.stderr,
+            )
+            return
 
         # Construct output path preserving relative structure
         relative_path = Path(target_file)
-        output_path = OUTPUT_BASE_DIR / relative_path.parent / relative_path.with_suffix(".json").name
+        output_path = (
+            OUTPUT_BASE_DIR
+            / relative_path.parent
+            / relative_path.with_suffix(".json").name
+        )
 
         print(f"  Input:  {input_path}")
         print(f"  Output: {output_path}")
@@ -341,12 +429,16 @@ def generate_from_doc(target_dirs: str | tuple | list | None = None, target_file
         success = False
         if instruction_pairs is not None:
             try:
-                with open(output_path, 'w', encoding='utf-8') as f_out:
+                with open(output_path, "w", encoding="utf-8") as f_out:
                     json.dump(instruction_pairs, f_out, indent=2, ensure_ascii=False)
-                print(f"    -> Saved {len(instruction_pairs)} instruction pairs to {output_path}")
+                print(
+                    f"    -> Saved {len(instruction_pairs)} instruction pairs to {output_path}"
+                )
                 success = True
             except Exception as e:
-                print(f"    Error writing output file {output_path}: {e}", file=sys.stderr)
+                print(
+                    f"    Error writing output file {output_path}: {e}", file=sys.stderr
+                )
 
         print("\n--- Single Doc File Processing Summary ---")
         if success:
@@ -359,32 +451,52 @@ def generate_from_doc(target_dirs: str | tuple | list | None = None, target_file
             print("Total successfully generated:            0")
             print("Total failed:                            1")
             print("\nCompleted with errors.")
-        return # Exit after processing single file
+        return  # Exit after processing single file
 
     # --- Determine Target Directories (only if target_file was not provided) ---
     actual_target_dirs = []
     if target_dirs is None:
-        if DOC_INPUT_BASE_DIR.is_dir(): # Use renamed constant
+        if DOC_INPUT_BASE_DIR.is_dir():  # Use renamed constant
             # Sort directories for consistent processing order
-            actual_target_dirs = sorted([d.name for d in DOC_INPUT_BASE_DIR.iterdir() if d.is_dir()]) # Use renamed constant
+            actual_target_dirs = sorted(
+                [d.name for d in DOC_INPUT_BASE_DIR.iterdir() if d.is_dir()]
+            )  # Use renamed constant
         if not actual_target_dirs:
-             print(f"Error: No subdirectories found in {DOC_INPUT_BASE_DIR}. Cannot determine default targets.", file=sys.stderr) # Use renamed constant
-             return
-        print(f"No target directories specified, defaulting to all found (in order): {actual_target_dirs}")
+            print(
+                f"Error: No subdirectories found in {DOC_INPUT_BASE_DIR}. Cannot determine default targets.",
+                file=sys.stderr,
+            )  # Use renamed constant
+            return
+        print(
+            f"No target directories specified, defaulting to all found (in order): {actual_target_dirs}"
+        )
     elif isinstance(target_dirs, str):
         # Handle single string or comma-separated string input
-        actual_target_dirs = sorted([d.strip() for d in target_dirs.split(',') if d.strip()])
+        actual_target_dirs = sorted(
+            [d.strip() for d in target_dirs.split(",") if d.strip()]
+        )
         if not actual_target_dirs:
-             print(f"Warning: Invalid or empty 'target_dirs' string provided: '{target_dirs}'. Exiting.", file=sys.stderr)
-             return
+            print(
+                f"Warning: Invalid or empty 'target_dirs' string provided: '{target_dirs}'. Exiting.",
+                file=sys.stderr,
+            )
+            return
     elif isinstance(target_dirs, (tuple, list)):
         # Handle tuple/list input (e.g., fire parsing 'a,b' into ('a', 'b'))
-        actual_target_dirs = sorted([str(d).strip() for d in target_dirs if str(d).strip()])
+        actual_target_dirs = sorted(
+            [str(d).strip() for d in target_dirs if str(d).strip()]
+        )
         if not actual_target_dirs:
-             print(f"Warning: Invalid or empty 'target_dirs' tuple/list provided: {target_dirs}. Exiting.", file=sys.stderr)
-             return
+            print(
+                f"Warning: Invalid or empty 'target_dirs' tuple/list provided: {target_dirs}. Exiting.",
+                file=sys.stderr,
+            )
+            return
     else:
-        print(f"Warning: Invalid 'target_dirs' argument type: {type(target_dirs)}. Value: {target_dirs}. Exiting.", file=sys.stderr)
+        print(
+            f"Warning: Invalid 'target_dirs' argument type: {type(target_dirs)}. Value: {target_dirs}. Exiting.",
+            file=sys.stderr,
+        )
         return
 
     # --- Processing Setup (only runs if target_file was None) ---
@@ -394,41 +506,47 @@ def generate_from_doc(target_dirs: str | tuple | list | None = None, target_file
     # Shared resources and locks
     summary_lock = threading.Lock()
     summary_stats = {
-        'total_files_processed': 0,
-        'total_files_succeeded': 0,
-        'total_files_failed': 0,
-        'total_txt_files_found': 0
+        "total_files_processed": 0,
+        "total_files_succeeded": 0,
+        "total_files_failed": 0,
+        "total_txt_files_found": 0,
     }
-    reference_lock = threading.Lock() # Lock for reference file access
+    reference_lock = threading.Lock()  # Lock for reference file access
 
     # --- Initialize/Clear Reference File (Optional but recommended for clean runs) ---
     # Check if the reference directory is among the targets before clearing
     if REFERENCE_DIR_NAME in actual_target_dirs:
         reference_output_dir = OUTPUT_BASE_DIR / REFERENCE_DIR_NAME
         reference_output_path = reference_output_dir / REFERENCE_OUTPUT_FILENAME
-        print(f"\nEnsuring reference directory exists and clearing/initializing {reference_output_path} for this run...")
+        print(
+            f"\nEnsuring reference directory exists and clearing/initializing {reference_output_path} for this run..."
+        )
         try:
             reference_output_dir.mkdir(parents=True, exist_ok=True)
             # Initialize with an empty list
-            with open(reference_output_path, 'w', encoding='utf-8') as f_init:
+            with open(reference_output_path, "w", encoding="utf-8") as f_init:
                 json.dump([], f_init)
             print(f"  -> Initialized {reference_output_path}")
         except Exception as e:
-            print(f"  Warning: Could not initialize reference file {reference_output_path}: {e}", file=sys.stderr)
+            print(
+                f"  Warning: Could not initialize reference file {reference_output_path}: {e}",
+                file=sys.stderr,
+            )
             # Decide if this is fatal or just a warning. Proceeding for now.
 
     for dir_name in actual_target_dirs:
-        _process_directory_concurrently(dir_name, summary_lock, summary_stats, reference_lock)
+        _process_directory_concurrently(
+            dir_name, summary_lock, summary_stats, reference_lock
+        )
         print("-" * 40)
-
 
     print("\nAll target doc directory processing finished.")
 
     # --- Overall Summary ---
-    total_txt_files_found = summary_stats['total_txt_files_found']
-    total_files_processed = summary_stats['total_files_processed']
-    total_files_succeeded = summary_stats['total_files_succeeded']
-    total_files_failed = summary_stats['total_files_failed']
+    total_txt_files_found = summary_stats["total_txt_files_found"]
+    total_files_processed = summary_stats["total_files_processed"]
+    total_files_succeeded = summary_stats["total_files_succeeded"]
+    total_files_failed = summary_stats["total_files_failed"]
 
     print("\n--- Overall Doc Processing Summary ---")
     print(f"Total .txt files found across all targets: {total_txt_files_found}")
@@ -444,37 +562,51 @@ def generate_from_doc(target_dirs: str | tuple | list | None = None, target_file
 
 # --- Generate Instructions from Hugging Face Dataset ---
 
+
 def _append_to_json(file_path: Path, new_data: list):
     """Safely appends a list of dictionaries to a JSON file containing a list."""
     with file_write_lock:
         existing_data = []
         try:
             if file_path.is_file() and file_path.stat().st_size > 0:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
-                    if content.strip(): # Check if file is not just whitespace
+                    if content.strip():  # Check if file is not just whitespace
                         existing_data = json.loads(content)
                         if not isinstance(existing_data, list):
-                            print(f"Warning: Corrupted JSON file {file_path} (not a list). Re-initializing.", file=sys.stderr)
+                            print(
+                                f"Warning: Corrupted JSON file {file_path} (not a list). Re-initializing.",
+                                file=sys.stderr,
+                            )
                             existing_data = []
                     else:
-                         existing_data = [] # Treat empty or whitespace-only file as empty list
+                        existing_data = (
+                            []
+                        )  # Treat empty or whitespace-only file as empty list
             else:
-                 # Ensure parent directory exists if file doesn't exist
-                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                 print(f"  Note: Created directory {file_path.parent}")
+                # Ensure parent directory exists if file doesn't exist
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                print(f"  Note: Created directory {file_path.parent}")
         except json.JSONDecodeError:
-            print(f"Warning: Corrupted JSON file {file_path} (invalid JSON). Re-initializing.", file=sys.stderr)
+            print(
+                f"Warning: Corrupted JSON file {file_path} (invalid JSON). Re-initializing.",
+                file=sys.stderr,
+            )
             existing_data = []
         except FileNotFoundError:
-             print(f"Warning: File not found during read {file_path}. Initializing.", file=sys.stderr)
-             existing_data = []
-             file_path.parent.mkdir(parents=True, exist_ok=True)
-             print(f"  Note: Created directory {file_path.parent}")
+            print(
+                f"Warning: File not found during read {file_path}. Initializing.",
+                file=sys.stderr,
+            )
+            existing_data = []
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            print(f"  Note: Created directory {file_path.parent}")
         except Exception as e:
-             print(f"Error reading JSON file {file_path}: {e}. Initializing.", file=sys.stderr)
-             existing_data = []
-
+            print(
+                f"Error reading JSON file {file_path}: {e}. Initializing.",
+                file=sys.stderr,
+            )
+            existing_data = []
 
         existing_data.extend(new_data)
 
@@ -482,7 +614,7 @@ def _append_to_json(file_path: Path, new_data: list):
         random.shuffle(existing_data)
 
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(existing_data, f, indent=2, ensure_ascii=False)
             print(f"  -> Successfully appended {len(new_data)} items to {file_path}")
         except Exception as e:
@@ -502,44 +634,62 @@ def generate_from_hf(dataset_name: str, sample_size: int = TARGET_SAMPLE_SIZE):
     print(f"Target sample size: {sample_size}")
     print(f"Output train file: {TRAIN_PATH}")
     print(f"Output test file: {TEST_PATH}")
-
     initial_load_size = int(sample_size * INITIAL_SAMPLE_MULTIPLIER)
-    print(f"Attempting to load approx {initial_load_size} rows initially (streaming)...")
+    print(
+        f"Attempting to load approx {initial_load_size} rows initially (streaming)..."
+    )
 
     processed_pairs = []
     rows_processed = 0
     try:
-        dataset = load_dataset(dataset_name, split='train', streaming=True, trust_remote_code=True)
-        sampled_dataset = dataset.take(initial_load_size) # take() works with iterable datasets
+        dataset = load_dataset(
+            dataset_name, split="train", streaming=True, trust_remote_code=True
+        )
+        sampled_dataset = dataset.take(
+            initial_load_size
+        )  # take() works with iterable datasets
 
         print("Streaming and processing rows...")
         for example in sampled_dataset:
             rows_processed += 1
-            pair = {"instruction": example['instruction'], "answer": example['response']}
+            pair = {
+                "instruction": example["instruction"],
+                "answer": example["response"],
+            }
             processed_pairs.append(pair)
 
             # Provide periodic updates
             if rows_processed % 500 == 0:
-                 print(f"    Processed {rows_processed} rows, collected {len(processed_pairs)} pairs...")
+                print(
+                    f"    Processed {rows_processed} rows, collected {len(processed_pairs)} pairs..."
+                )
 
             if len(processed_pairs) >= sample_size:
-                print(f"  Reached target sample size ({sample_size}) after processing {rows_processed} rows.")
+                print(
+                    f"  Reached target sample size ({sample_size}) after processing {rows_processed} rows."
+                )
                 break
-        print(f"Finished streaming. Processed {rows_processed} rows, generated {len(processed_pairs)} valid pairs.")
+        print(
+            f"Finished streaming. Processed {rows_processed} rows, generated {len(processed_pairs)} valid pairs."
+        )
 
     except Exception as e:
-        print(f"Error loading or processing dataset {dataset_name}: {e}", file=sys.stderr)
+        print(
+            f"Error loading or processing dataset {dataset_name}: {e}", file=sys.stderr
+        )
         return
 
     if not processed_pairs:
-        print("Error: No valid instruction/answer pairs were generated. Exiting.", file=sys.stderr)
+        print(
+            "Error: No valid instruction/answer pairs were generated. Exiting.",
+            file=sys.stderr,
+        )
         return
 
     # Ensure we only use up to sample_size pairs if we generated more
     if len(processed_pairs) > sample_size:
         processed_pairs = processed_pairs[:sample_size]
         print(f"  Trimmed generated pairs to target size: {sample_size}")
-
 
     # Shuffle and split
     random.shuffle(processed_pairs)
@@ -561,7 +711,7 @@ def generate_from_hf(dataset_name: str, sample_size: int = TARGET_SAMPLE_SIZE):
     print("\n--- Hugging Face Data Processing Summary ---")
     print(f"Dataset:              {dataset_name}")
     print(f"Target sample size:   {sample_size}")
-    print(f"Initial rows streamed:{rows_processed}") # Corrected label
+    print(f"Initial rows streamed:{rows_processed}")  # Corrected label
     print(f"Valid pairs generated:{len(processed_pairs)}")
     print(f"Appended to train:    {len(train_pairs)}")
     print(f"Appended to test:     {len(test_pairs)}")
@@ -594,64 +744,85 @@ def generate_from_code(target_years: str | tuple | list | None = None):
     all_year_dirs = []
     if CODE_INPUT_BASE_DIR.is_dir():
         # Find directories matching _YYYY pattern
-        year_pattern = re.compile(r'^_(\d{4})$')
+        year_pattern = re.compile(r"^_(\d{4})$")
         for item in CODE_INPUT_BASE_DIR.iterdir():
             if item.is_dir():
                 match = year_pattern.match(item.name)
                 if match:
                     year = int(match.group(1))
                     if year >= MIN_YEAR_CODE:
-                        all_year_dirs.append(item) # Store Path object
+                        all_year_dirs.append(item)  # Store Path object
 
     if not all_year_dirs:
-        print(f"Error: No year directories found in {CODE_INPUT_BASE_DIR} matching pattern _YYYY with year >= {MIN_YEAR_CODE}.", file=sys.stderr)
+        print(
+            f"Error: No year directories found in {CODE_INPUT_BASE_DIR} matching pattern _YYYY with year >= {MIN_YEAR_CODE}.",
+            file=sys.stderr,
+        )
         return
 
     # Filter based on target_years argument
     actual_target_year_dirs = []
     if target_years is None:
         actual_target_year_dirs = sorted(all_year_dirs, key=lambda p: p.name)
-        print(f"No target years specified, processing all found valid years: {[d.name for d in actual_target_year_dirs]}")
+        print(
+            f"No target years specified, processing all found valid years: {[d.name for d in actual_target_year_dirs]}"
+        )
     else:
         requested_years = set()
         if isinstance(target_years, (int, str)):
             # Handle single int, single string 'YYYY', or comma-separated string 'YYYY,YYYY'
             years_str = str(target_years)
-            for year_str in years_str.split(','):
+            for year_str in years_str.split(","):
                 year_str = year_str.strip()
                 if year_str.isdigit():
                     requested_years.add(int(year_str))
                 else:
-                    print(f"Warning: Invalid year format '{year_str}' in target_years. Skipping.", file=sys.stderr)
+                    print(
+                        f"Warning: Invalid year format '{year_str}' in target_years. Skipping.",
+                        file=sys.stderr,
+                    )
         elif isinstance(target_years, (tuple, list)):
-             # Handle tuple/list input (e.g., fire parsing '2022,2023' into ('2022', '2023'))
-             for year_item in target_years:
-                 year_str = str(year_item).strip()
-                 if year_str.isdigit():
-                     requested_years.add(int(year_str))
-                 else:
-                     print(f"Warning: Invalid year format '{year_str}' in target_years. Skipping.", file=sys.stderr)
+            # Handle tuple/list input (e.g., fire parsing '2022,2023' into ('2022', '2023'))
+            for year_item in target_years:
+                year_str = str(year_item).strip()
+                if year_str.isdigit():
+                    requested_years.add(int(year_str))
+                else:
+                    print(
+                        f"Warning: Invalid year format '{year_str}' in target_years. Skipping.",
+                        file=sys.stderr,
+                    )
         else:
-            print(f"Warning: Invalid 'target_years' argument type: {type(target_years)}. Value: {target_years}. Exiting.", file=sys.stderr)
+            print(
+                f"Warning: Invalid 'target_years' argument type: {type(target_years)}. Value: {target_years}. Exiting.",
+                file=sys.stderr,
+            )
             return
 
         if not requested_years:
-             print("Warning: No valid target years provided or parsed. Exiting.", file=sys.stderr)
-             return
+            print(
+                "Warning: No valid target years provided or parsed. Exiting.",
+                file=sys.stderr,
+            )
+            return
 
         # Filter the found dirs by the requested years
         for year_dir in all_year_dirs:
-            year = int(year_dir.name[1:]) # Extract year from '_YYYY'
+            year = int(year_dir.name[1:])  # Extract year from '_YYYY'
             if year in requested_years:
                 actual_target_year_dirs.append(year_dir)
 
         actual_target_year_dirs = sorted(actual_target_year_dirs, key=lambda p: p.name)
-        print(f"Processing requested target years: {[d.name for d in actual_target_year_dirs]}")
+        print(
+            f"Processing requested target years: {[d.name for d in actual_target_year_dirs]}"
+        )
         if len(actual_target_year_dirs) < len(requested_years):
-             found_years_set = {int(d.name[1:]) for d in actual_target_year_dirs}
-             missing_years = requested_years - found_years_set
-             print(f"Warning: Requested years not found or invalid (>= {MIN_YEAR_CODE}): {sorted(list(missing_years))}", file=sys.stderr)
-
+            found_years_set = {int(d.name[1:]) for d in actual_target_year_dirs}
+            missing_years = requested_years - found_years_set
+            print(
+                f"Warning: Requested years not found or invalid (>= {MIN_YEAR_CODE}): {sorted(list(missing_years))}",
+                file=sys.stderr,
+            )
 
     if not actual_target_year_dirs:
         print("Error: No valid target year directories to process.", file=sys.stderr)
@@ -659,10 +830,10 @@ def generate_from_code(target_years: str | tuple | list | None = None):
 
     # --- Processing Setup ---
     summary_stats = {
-        'total_py_files_found': 0,
-        'total_files_processed': 0,
-        'total_files_succeeded': 0,
-        'total_files_failed': 0
+        "total_py_files_found": 0,
+        "total_files_processed": 0,
+        "total_files_succeeded": 0,
+        "total_files_failed": 0,
     }
 
     # --- Process each target year directory ---
@@ -671,7 +842,7 @@ def generate_from_code(target_years: str | tuple | list | None = None):
         # Find all .py files recursively within this year directory
         py_files = list(year_dir.rglob("*.py"))
         current_dir_py_found = len(py_files)
-        summary_stats['total_py_files_found'] += current_dir_py_found
+        summary_stats["total_py_files_found"] += current_dir_py_found
 
         if not py_files:
             print(f"  No .py files found in {year_dir}.")
@@ -680,8 +851,10 @@ def generate_from_code(target_years: str | tuple | list | None = None):
         print(f"  Found {current_dir_py_found} .py files. Processing sequentially...")
 
         for input_py_path in py_files:
-            print(f"    Processing file: {input_py_path.relative_to(CODE_INPUT_BASE_DIR)}")
-            summary_stats['total_files_processed'] += 1
+            print(
+                f"    Processing file: {input_py_path.relative_to(CODE_INPUT_BASE_DIR)}"
+            )
+            summary_stats["total_files_processed"] += 1
 
             # Construct output path mirroring the input structure
             relative_path = input_py_path.relative_to(CODE_INPUT_BASE_DIR)
@@ -695,26 +868,32 @@ def generate_from_code(target_years: str | tuple | list | None = None):
 
             if instruction_pairs is not None:
                 try:
-                    with open(output_path, 'w', encoding='utf-8') as f_out:
-                        json.dump(instruction_pairs, f_out, indent=2, ensure_ascii=False)
-                    print(f"      -> Saved {len(instruction_pairs)} pairs to {output_path.relative_to(OUTPUT_BASE_DIR)}")
-                    summary_stats['total_files_succeeded'] += 1
+                    with open(output_path, "w", encoding="utf-8") as f_out:
+                        json.dump(
+                            instruction_pairs, f_out, indent=2, ensure_ascii=False
+                        )
+                    print(
+                        f"      -> Saved {len(instruction_pairs)} pairs to {output_path.relative_to(OUTPUT_BASE_DIR)}"
+                    )
+                    summary_stats["total_files_succeeded"] += 1
                 except Exception as e:
-                    print(f"      Error writing output file {output_path}: {e}", file=sys.stderr)
-                    summary_stats['total_files_failed'] += 1
+                    print(
+                        f"      Error writing output file {output_path}: {e}",
+                        file=sys.stderr,
+                    )
+                    summary_stats["total_files_failed"] += 1
             else:
                 # Failure already printed in helper function
-                summary_stats['total_files_failed'] += 1
+                summary_stats["total_files_failed"] += 1
         print("-" * 40)
-
 
     print("\nAll target year directory processing finished.")
 
     # --- Overall Summary ---
-    total_py_files_found = summary_stats['total_py_files_found']
-    total_files_processed = summary_stats['total_files_processed']
-    total_files_succeeded = summary_stats['total_files_succeeded']
-    total_files_failed = summary_stats['total_files_failed']
+    total_py_files_found = summary_stats["total_py_files_found"]
+    total_files_processed = summary_stats["total_files_processed"]
+    total_files_succeeded = summary_stats["total_files_succeeded"]
+    total_files_failed = summary_stats["total_files_failed"]
 
     print("\n--- Overall Code Processing Summary ---")
     print(f"Total .py files found across target years: {total_py_files_found}")
@@ -729,8 +908,10 @@ def generate_from_code(target_years: str | tuple | list | None = None):
 
 
 if __name__ == "__main__":
-    fire.Fire({
-        "generate_from_doc": generate_from_doc,
-        "generate_from_code": generate_from_code,
-        "generate_from_hf": generate_from_hf
-    })
+    fire.Fire(
+        {
+            "generate_from_doc": generate_from_doc,
+            "generate_from_code": generate_from_code,
+            "generate_from_hf": generate_from_hf,
+        }
+    )
