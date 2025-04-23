@@ -11,8 +11,8 @@ BNB_COMPUTE_DTYPE="bfloat16"
 BNB_QUANT_TYPE="nf4"
 
 # PEFT Args
-LORA_ALPHA=8
-LORA_DROPOUT=0.01
+LORA_ALPHA=16
+LORA_DROPOUT=0.05
 LORA_R=32
 
 # Training Args
@@ -23,11 +23,11 @@ GRADIENT_ACCUMULATION_STEPS=8
 OPTIM="paged_adamw_8bit"
 SAVE_STEPS=50 # Save checkpoints every N steps
 LOGGING_STEPS=10 # Log metrics every N steps
-LEARNING_RATE=1e-4
+LEARNING_RATE=3e-5
 WEIGHT_DECAY=0.001
 FP16_FLAG="" # Set to "--fp16" to enable, leave empty to disable
 BF16_FLAG="--bf16" # Set to "--bf16" to enable, leave empty to disable (Script default is True for bf16)
-MAX_GRAD_NORM=0.3
+MAX_GRAD_NORM=0.5
 MAX_STEPS=-1 # Set to positive integer to limit steps, overrides epochs
 WARMUP_RATIO=0.03
 LR_SCHEDULER_TYPE="cosine"
