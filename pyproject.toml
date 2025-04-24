@@ -14,6 +14,7 @@ dependencies = [
     "trl>=0.16.1",
     "uvicorn>=0.34.2",
     "wandb>=0.19.9",
+    "fire>=0.7.0",
     # "bitsandbytes==0.45.5",
 ]
 
@@ -22,7 +23,6 @@ dev = [
     "beautifulsoup4>=4.13.3",
     "httpx>=0.28.1",
     "openai>=1.71.0",
-    "fire>=0.7.0",
     "google-cloud-storage>=3.1.0",
     "google-genai>=1.10.0",
     "latex>=0.7.0",
