@@ -33,10 +33,10 @@ WARMUP_RATIO=0.03
 LR_SCHEDULER_TYPE="cosine"
 
 # Evaluation & Early Stopping Args
-EVALUATION_STRATEGY="steps" # "steps", "epoch", or "no"
-EVAL_STEPS=50 # Evaluate every N steps if strategy is "steps"
-LOAD_BEST_MODEL_AT_END_FLAG="--load_best_model_at_end" # Include flag to enable (script default is True)
-EARLY_STOPPING_PATIENCE=3 # Patience for early stopping (requires load_best_model_at_end)
+EVALUATION_STRATEGY="steps"
+EVAL_STEPS=50
+LOAD_BEST_MODEL_AT_END_FLAG="--load_best_model_at_end"
+EARLY_STOPPING_PATIENCE=3 #
 EARLY_STOPPING_THRESHOLD=0.0
 
 # --- Execute Training Script ---
