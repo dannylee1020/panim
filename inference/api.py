@@ -43,7 +43,7 @@ def parse_cli_args():
         help="Maximum number of new tokens to generate",
     )
     parser.add_argument(
-        "--temperature", type=float, default=0.0, help="Generation temperature"
+        "--temperature", type=float, default=0.7, help="Generation temperature"
     )
     parser.add_argument(
         "--do_sample", action="store_true", default=True, help="Enable sampling"
