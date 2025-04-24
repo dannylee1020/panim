@@ -41,7 +41,7 @@ echo "Virtual environment activated."
 uv pip install bitsandbytes
 
 # --- Conditionally Copy SSH Keys ---
-SSH_SOURCE_DIR="../ssh"
+SSH_SOURCE_DIR="/workspace/ssh"
 echo "Checking for SSH keys in $SSH_SOURCE_DIR..."
 if [ -d "$SSH_SOURCE_DIR" ]; then
     echo "Found directory: $SSH_SOURCE_DIR."
