@@ -41,25 +41,29 @@ echo "Virtual environment activated."
 uv pip install bitsandbytes
 
 # --- Conditionally Copy SSH Keys ---
-echo "Checking for local SSH keys..."
-if [ -d "ssh" ]; then
-    echo "Found ssh/ directory."
-    if [ -f "ssh/id_ed25519" ] && [ -f "ssh/id_ed25519.pub" ]; then
-        echo "Found id_ed25519 key pair. Copying to /root/.ssh/..."
-        chmod 700 /root/.ssh
-        cp ssh/id_ed25519 /root/.ssh/id_ed25519
-        cp ssh/id_ed25519.pub /root/.ssh/id_ed25519.pub
-        chmod 600 /root/.ssh/id_ed25519
-        chmod 644 /root/.ssh/id_ed25519.pub
-        echo "SSH keys copied and permissions set."
+SSH_SOURCE_DIR="../ssh"
+echo "Checking for SSH keys in $SSH_SOURCE_DIR..."
+if [ -d "$SSH_SOURCE_DIR" ]; then
+    echo "Found directory: $SSH_SOURCE_DIR."
+    if [ -f "$SSH_SOURCE_DIR/id_ed25519" ] && [ -f "$SSH_SOURCE_DIR/id_ed25519.pub" ]; then
+        echo "Found id_ed25519 key pair in $SSH_SOURCE_DIR. Copying to $HOME/.ssh/..."
+        # Ensure target directory exists and has correct permissions
+        mkdir -p $HOME/.ssh
+        chmod 700 $HOME/.ssh
+        # Copy keys
+        cp "$SSH_SOURCE_DIR/id_ed25519" $HOME/.ssh/id_ed25519
+        cp "$SSH_SOURCE_DIR/id_ed25519.pub" $HOME/.ssh/id_ed25519.pub
+        # Set permissions on copied keys
+        chmod 600 $HOME/.ssh/id_ed25519
+        chmod 644 $HOME/.ssh/id_ed25519.pub
+        echo "SSH keys copied from $SSH_SOURCE_DIR and permissions set."
     else
-        echo "ssh/ directory exists, but id_ed25519 key pair not found. Skipping copy."
+        echo "$SSH_SOURCE_DIR directory exists, but id_ed25519 key pair not found. Skipping copy."
     fi
 else
-    echo "ssh/ directory not found. Skipping SSH key copy."
+    echo "Directory $SSH_SOURCE_DIR not found. Skipping SSH key copy."
 fi
 # --- End SSH Key Copy ---
 
 echo "Installing project dependencies into the virtual environment..."
 uv pip install .
-
