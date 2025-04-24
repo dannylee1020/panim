@@ -17,7 +17,7 @@ LORA_R=32
 
 # Training Args
 OUTPUT_DIR="./results/$(date +%Y%m%d_%H%M%S)" # Unique output dir per run
-NUM_TRAIN_EPOCHS=6.0
+NUM_TRAIN_EPOCHS=20.0
 PER_DEVICE_TRAIN_BATCH_SIZE=4
 GRADIENT_ACCUMULATION_STEPS=8
 OPTIM="paged_adamw_8bit"
