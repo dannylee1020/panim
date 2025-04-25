@@ -10,7 +10,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 def merge_and_push_to_hub(
     base_model_name: str = "google/gemma-3-12b-it",
     adapter_path: str = "./results/final_checkpoint",
-    hub_model_id: str = None,
+    hub_model_id: str = "dannylee1020/panim",
     hub_private_repo: bool = False,
     torch_dtype_str: str = "bfloat16",
 ):
@@ -32,15 +32,26 @@ def merge_and_push_to_hub(
         raise ValueError(f"Adapter path not found or not a directory: {adapter_path}")
 
     # --- Login to Hugging Face Hub ---
-    try:
-        login()
-        print("Logged into Hugging Face Hub (using cached credentials or HF_TOKEN).")
-    except Exception as e:
-        print(f"Error logging into Hugging Face Hub: {e}")
-        print(
-            "Please ensure you are logged in via `huggingface-cli login` or have HF_TOKEN set."
-        )
-        return
+    hf_token = os.getenv("HF_TOKEN")
+    if hf_token:
+        print("Found HF_TOKEN environment variable. Logging in.")
+        try:
+            # Explicitly pass the token
+            login(token=hf_token)
+            print("Logged into Hugging Face Hub using HF_TOKEN.")
+        except Exception as e:
+            print(f"Error logging into Hugging Face Hub using HF_TOKEN: {e}")
+            return
+    else:
+        # Fallback to default behavior (cached token or interactive prompt if no token found)
+        print("HF_TOKEN not found. Attempting login using cached credentials or interactive prompt.")
+        try:
+            login()
+            print("Logged into Hugging Face Hub (using cached credentials or interactive prompt).")
+        except Exception as e:
+            print(f"Error logging into Hugging Face Hub: {e}")
+            print("Please ensure you are logged in via `huggingface-cli login` or have HF_TOKEN set.")
+            return
 
     # --- Determine torch dtype ---
     try:

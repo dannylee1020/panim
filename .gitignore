@@ -13,3 +13,4 @@ source_code/
 .env
 inst/
 wandb/
+test.py

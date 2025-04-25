@@ -22,7 +22,6 @@ dependencies = [
 dev = [
     "beautifulsoup4>=4.13.3",
     "httpx>=0.28.1",
-    "openai>=1.71.0",
     "google-cloud-storage>=3.1.0",
     "google-genai>=1.10.0",
     "latex>=0.7.0",
