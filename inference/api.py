@@ -17,33 +17,31 @@ def parse_cli_args():
     parser.add_argument(
         "--base_model_name",
         type=str,
-        default="google/gemma-3-12b-it",
         help="Base Hugging Face model identifier",
     )
     parser.add_argument(
         "--adapter_path",
         type=str,
-        default="../results/final_checkpoint",
         help="Path to the trained PEFT adapter checkpoint",
     )
     parser.add_argument(
         "--host",
         type=str,
-        default="127.0.0.1",
         help="Host address to run the server on",
     )
     parser.add_argument(
-        "--port", type=int, default=8000, help="Port to run the server on"
+        "--port",
+        type=int,
+        help="Port to run the server on",
     )
     # Add generation parameters if needed
     parser.add_argument(
         "--max_new_tokens",
         type=int,
-        default=256,
         help="Maximum number of new tokens to generate",
     )
     parser.add_argument(
-        "--temperature", type=float, default=0.7, help="Generation temperature"
+        "--temperature", type=float, help="Generation temperature"
     )
     parser.add_argument(
         "--do_sample", action="store_true", default=True, help="Enable sampling"
